@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 project(solctra)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -qopenmp")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2 -MMD -MP -MF ${PROJECT_NAME}.d")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DPRINT_FOR_DEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "")
