@@ -1,5 +1,6 @@
 
 #include "solctra.h"
+#include "utils.h"
 #include <cstdlib>
 #include <string>
 #include <iostream>
@@ -57,6 +58,9 @@ int main(int argc, char** argv)
     const unsigned precision = getPrintPrecisionFromArgs(argc, argv);
     std::cout.precision(precision);
     std::cout << "Running with steps=[" << steps << "] and step size=[" << stepSize << "]." << std::endl;
+    const double startTime = getCurrentTime();
     RK4(A, steps, stepSize, 5, 1);
+    const double endTime = getCurrentTime();
+    std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
 }

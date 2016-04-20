@@ -4,15 +4,13 @@
 
 
 #include "solctra.h"
+#include "FileHandler.h"
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
-//#include <iostream>
-//#include <stdio.h>
-//#include <math.h>
-//#include <stdlib.h>
+#include <iostream>
 
-struct coil num_coil[12], vec_e_roof[12], Rmi, Rmf;
+struct coil num_coil[12], vec_e_roof[12];
 float leng_segment[12][360];
 
 void e_roof(void)
@@ -63,17 +61,24 @@ void load_coil_data(void)
 
 cartesian magnetic_field(const cartesian& point)
 {
-    cartesian B = {0, 0, 0}, V = {0, 0, 0}, U = {0, 0, 0};
-    float norm_Rmi;
-    float norm_Rmf;
-    float C;
+    cartesian B = {0, 0, 0};
+    cartesian B_thread[12];
+#pragma omp parallel for
     for (int i = 0; i < 12; i++)
     {
-        R_vectors(point.x, point.y, point.z, i);
+        //float norm_Rmi;
+        //float norm_Rmf;
+        //float C;
+        B_thread[i].x = 0;
+        B_thread[i].y = 0;
+        B_thread[i].z = 0;
+        struct coil Rmi, Rmf;
+        R_vectors(point, i, Rmi, Rmf);
         for (int j = 0; j < 360; j++)
         {
-            norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
-            norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
+            cartesian U;
+            const float norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
+            const float norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
 
             //firts vector of cross product in equation 8
             U.x = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].x[j];
@@ -81,18 +86,25 @@ cartesian magnetic_field(const cartesian& point)
             U.z = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].z[j];
 
             //second vector of cross product in equation 8
-            C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
+            const float C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
                  (( 1 ) / ( pow(( norm_Rmi + norm_Rmf ), 2) - pow(leng_segment[i][j], 2))));
 
+            cartesian V;
             V.x = Rmi.x[j] * C;
             V.y = Rmi.y[j] * C;
             V.z = Rmi.z[j] * C;
 
             //cross product in equation 8
-            B.x = B.x + (( U.y * V.z ) - ( U.z * V.y ));
-            B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
-            B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
+            B_thread[i].x = B_thread[i].x + (( U.y * V.z ) - ( U.z * V.y ));
+            B_thread[i].y = B_thread[i].y - (( U.x * V.z ) - ( U.z * V.x ));
+            B_thread[i].z = B_thread[i].z + (( U.x * V.y ) - ( U.y * V.x ));
         }
+    }
+    for(int i = 0 ; i < 12 ; ++i)
+    {
+        B.x += B_thread[i].x;
+        B.y += B_thread[i].y;
+        B.z += B_thread[i].z;
     }
     return B;
 }
@@ -103,16 +115,16 @@ float norm_of(const cartesian& vec)
     return ( norm );
 }
 
-void R_vectors(const float& xx, const float& yy, const float& zz, const int act_coil)
+void R_vectors(const cartesian& point, const int act_coil, struct coil& Rmi, struct coil& Rmf)
 {
     for (int i = 0; i < 360; i++)
     {
-        Rmi.x[i] = xx - num_coil[act_coil].x[i];
-        Rmi.y[i] = yy - num_coil[act_coil].y[i];
-        Rmi.z[i] = zz - num_coil[act_coil].z[i];
-        Rmf.x[i] = xx - num_coil[act_coil].x[i + 1];
-        Rmf.y[i] = yy - num_coil[act_coil].y[i + 1];
-        Rmf.z[i] = zz - num_coil[act_coil].z[i + 1];
+        Rmi.x[i] = point.x - num_coil[act_coil].x[i];
+        Rmi.y[i] = point.y - num_coil[act_coil].y[i];
+        Rmi.z[i] = point.z - num_coil[act_coil].z[i];
+        Rmf.x[i] = point.x - num_coil[act_coil].x[i + 1];
+        Rmf.y[i] = point.y - num_coil[act_coil].y[i + 1];
+        Rmf.z[i] = point.z - num_coil[act_coil].z[i + 1];
     }
 }
 
@@ -133,14 +145,9 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
     float r_radius;
     float actual_state;
 
-    char file_name[20];
-    sprintf(file_name, "results/path%d.txt", path);
-    if( remove(file_name) != 0 )
-        perror( "Error deleting file" );
-    else
-        puts( "File successfully deleted" );
+    FileHandler handler(path);
 
-    save_data(path, start_point.x, start_point.y, start_point.z);
+    handler.write(start_point.x, start_point.y, start_point.z);
 
     p0 = start_point;
 
@@ -182,7 +189,7 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         p0.y = p0.y + (( K1.y + 2 * K2.y + 2 * K3.y + K4.y ) / 6 );
         p0.z = p0.z + (( K1.z + 2 * K2.z + 2 * K3.z + K4.z ) / 6 );
 
-        save_data(path, p0.x, p0.y, p0.z);
+        handler.write(p0.x, p0.y, p0.z);
 
         if (mode == 1)
         {
@@ -197,34 +204,15 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
             r_radius = norm_of(r_vector);
             if (r_radius > 0.0944165)
             {
-                save_data(path, r_radius, 000, 000);
+                handler.write(r_radius, 000, 000);
                 break;
             }
         }
-        actual_state = i / steps * 100;
+        actual_state = static_cast<float>(i * 100) / static_cast<float>(steps);
         if (actual_state <= 10)
         {
-            printf("el porcentaje completado es %e\n", actual_state);
-            //std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
+            //printf("el porcentaje completado es %e\n", actual_state);
+            std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
         }
     }
-}
-
-int save_data(const int phat_num, const float& x, const float& y, const float& z)
-{
-    char file_name[20];
-    FILE* fp;
-    sprintf(file_name, "results/path%d.txt", phat_num);
-    /* open the file */
-    fp = fopen(file_name, "a");
-    if (fp == NULL)
-    {
-        printf("Unable to open %d for appending. Nothing to do\n", file_name);
-        exit(0);
-    }
-    // write to the file
-    fprintf(fp, "%e\t%e\t%e\n", x, y, z);
-    // close the file
-    fclose(fp);
-    return 0;
 }
