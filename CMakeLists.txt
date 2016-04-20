@@ -3,9 +3,9 @@ set(CMAKE_C_COMPILER "/opt/intel/compilers_and_libraries_2016.1.150/linux/bin/in
 set(CMAKE_CXX_COMPILER "/opt/intel/compilers_and_libraries_2016.1.150/linux/bin/intel64/icpc")
 project(solctra)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -qopenmp")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -qopenmp")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2 -MMD -MP -MF ${PROJECT_NAME}.d")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DPRINT_FOR_DEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 

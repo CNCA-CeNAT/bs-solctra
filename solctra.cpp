@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <iostream>
 
-struct coil num_coil[12], vec_e_roof[12], Rmi, Rmf;
+struct coil num_coil[12], vec_e_roof[12];
 float leng_segment[12][360];
 
 void e_roof(void)
@@ -66,7 +66,8 @@ cartesian magnetic_field(const cartesian& point)
     float C;
     for (int i = 0; i < 12; i++)
     {
-        R_vectors(point.x, point.y, point.z, i);
+        struct coil Rmi, Rmf;
+        R_vectors(point, i, Rmi, Rmf);
         for (int j = 0; j < 360; j++)
         {
             norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
@@ -100,16 +101,16 @@ float norm_of(const cartesian& vec)
     return ( norm );
 }
 
-void R_vectors(const float& xx, const float& yy, const float& zz, const int act_coil)
+void R_vectors(const cartesian& point, const int act_coil, struct coil& Rmi, struct coil& Rmf)
 {
     for (int i = 0; i < 360; i++)
     {
-        Rmi.x[i] = xx - num_coil[act_coil].x[i];
-        Rmi.y[i] = yy - num_coil[act_coil].y[i];
-        Rmi.z[i] = zz - num_coil[act_coil].z[i];
-        Rmf.x[i] = xx - num_coil[act_coil].x[i + 1];
-        Rmf.y[i] = yy - num_coil[act_coil].y[i + 1];
-        Rmf.z[i] = zz - num_coil[act_coil].z[i + 1];
+        Rmi.x[i] = point.x - num_coil[act_coil].x[i];
+        Rmi.y[i] = point.y - num_coil[act_coil].y[i];
+        Rmi.z[i] = point.z - num_coil[act_coil].z[i];
+        Rmf.x[i] = point.x - num_coil[act_coil].x[i + 1];
+        Rmf.y[i] = point.y - num_coil[act_coil].y[i + 1];
+        Rmf.z[i] = point.z - num_coil[act_coil].z[i + 1];
     }
 }
 
@@ -185,8 +186,8 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         {
             p.x = p0.x;
             p.y = p0.y;
-            Ovect.x = ( p.x / norm_of(p)) * 0.2381f; //// Origen vector
-            Ovect.y = ( p.y / norm_of(p)) * 0.2381f;
+            Ovect.x = ( p.x / norm_of(p)) * 0.2381; //// Origen vector
+            Ovect.y = ( p.y / norm_of(p)) * 0.2381;
             Ovect.z = 0;
             r_vector.x = p0.x - Ovect.x;
             r_vector.y = p0.y - Ovect.y;
@@ -198,8 +199,8 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
                 break;
             }
         }
-        actual_state = i / steps * 100;
-        if (actual_state <= 10)
+        actual_state = static_cast<float>(i * 100) / static_cast<float>(steps);
+        if (static_cast<int>(actual_state * 10) % 10 == 0)
         {
             //printf("el porcentaje completado es %e\n", actual_state);
             std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
