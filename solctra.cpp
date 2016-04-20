@@ -7,10 +7,7 @@
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
-//#include <iostream>
-//#include <stdio.h>
-//#include <math.h>
-//#include <stdlib.h>
+#include <iostream>
 
 struct coil num_coil[12], vec_e_roof[12], Rmi, Rmf;
 float leng_segment[12][360];
@@ -188,8 +185,8 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         {
             p.x = p0.x;
             p.y = p0.y;
-            Ovect.x = ( p.x / norm_of(p)) * 0.2381; //// Origen vector
-            Ovect.y = ( p.y / norm_of(p)) * 0.2381;
+            Ovect.x = ( p.x / norm_of(p)) * 0.2381f; //// Origen vector
+            Ovect.y = ( p.y / norm_of(p)) * 0.2381f;
             Ovect.z = 0;
             r_vector.x = p0.x - Ovect.x;
             r_vector.y = p0.y - Ovect.y;
@@ -204,8 +201,8 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         actual_state = i / steps * 100;
         if (actual_state <= 10)
         {
-            printf("el porcentaje completado es %e\n", actual_state);
-            //std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
+            //printf("el porcentaje completado es %e\n", actual_state);
+            std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
         }
     }
 }

@@ -5,9 +5,9 @@
 #ifndef SOLCTRA_SOLCTRA_H
 #define SOLCTRA_SOLCTRA_H
 
-#define     PI      3.141592654
-#define     miu     1.2566e-06
-#define     I       -4350
+#define     PI      3.141592654f
+#define     miu     1.2566e-06f
+#define     I       -4350.0f
 
 typedef struct
 {
