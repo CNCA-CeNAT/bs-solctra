@@ -61,18 +61,24 @@ void load_coil_data(void)
 
 cartesian magnetic_field(const cartesian& point)
 {
-    cartesian B = {0, 0, 0}, V = {0, 0, 0}, U = {0, 0, 0};
-    float norm_Rmi;
-    float norm_Rmf;
-    float C;
+    cartesian B = {0, 0, 0};
+    cartesian B_thread[12];
+#pragma omp parallel for
     for (int i = 0; i < 12; i++)
     {
+        //float norm_Rmi;
+        //float norm_Rmf;
+        //float C;
+        B_thread[i].x = 0;
+        B_thread[i].y = 0;
+        B_thread[i].z = 0;
         struct coil Rmi, Rmf;
         R_vectors(point, i, Rmi, Rmf);
         for (int j = 0; j < 360; j++)
         {
-            norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
-            norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
+            cartesian U;
+            const float norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
+            const float norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
 
             //firts vector of cross product in equation 8
             U.x = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].x[j];
@@ -80,18 +86,25 @@ cartesian magnetic_field(const cartesian& point)
             U.z = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].z[j];
 
             //second vector of cross product in equation 8
-            C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
+            const float C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
                  (( 1 ) / ( pow(( norm_Rmi + norm_Rmf ), 2) - pow(leng_segment[i][j], 2))));
 
+            cartesian V;
             V.x = Rmi.x[j] * C;
             V.y = Rmi.y[j] * C;
             V.z = Rmi.z[j] * C;
 
             //cross product in equation 8
-            B.x = B.x + (( U.y * V.z ) - ( U.z * V.y ));
-            B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
-            B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
+            B_thread[i].x = B_thread[i].x + (( U.y * V.z ) - ( U.z * V.y ));
+            B_thread[i].y = B_thread[i].y - (( U.x * V.z ) - ( U.z * V.x ));
+            B_thread[i].z = B_thread[i].z + (( U.x * V.y ) - ( U.y * V.x ));
         }
+    }
+    for(int i = 0 ; i < 12 ; ++i)
+    {
+        B.x += B_thread[i].x;
+        B.y += B_thread[i].y;
+        B.z += B_thread[i].z;
     }
     return B;
 }
