@@ -4,6 +4,7 @@
 
 
 #include "solctra.h"
+#include "FileHandler.h"
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
@@ -131,14 +132,9 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
     float r_radius;
     float actual_state;
 
-    char file_name[20];
-    sprintf(file_name, "results/path%d.txt", path);
-    if( remove(file_name) != 0 )
-        perror( "Error deleting file" );
-    else
-        puts( "File successfully deleted" );
+    FileHandler handler(path);
 
-    save_data(path, start_point.x, start_point.y, start_point.z);
+    handler.write(start_point.x, start_point.y, start_point.z);
 
     p0 = start_point;
 
@@ -180,7 +176,7 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         p0.y = p0.y + (( K1.y + 2 * K2.y + 2 * K3.y + K4.y ) / 6 );
         p0.z = p0.z + (( K1.z + 2 * K2.z + 2 * K3.z + K4.z ) / 6 );
 
-        save_data(path, p0.x, p0.y, p0.z);
+        handler.write(p0.x, p0.y, p0.z);
 
         if (mode == 1)
         {
@@ -195,34 +191,15 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
             r_radius = norm_of(r_vector);
             if (r_radius > 0.0944165)
             {
-                save_data(path, r_radius, 000, 000);
+                handler.write(r_radius, 000, 000);
                 break;
             }
         }
         actual_state = static_cast<float>(i * 100) / static_cast<float>(steps);
-        if (static_cast<int>(actual_state * 10) % 10 == 0)
+        if (actual_state <= 10)
         {
             //printf("el porcentaje completado es %e\n", actual_state);
             std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
         }
     }
-}
-
-int save_data(const int phat_num, const float& x, const float& y, const float& z)
-{
-    char file_name[20];
-    FILE* fp;
-    sprintf(file_name, "results/path%d.txt", phat_num);
-    /* open the file */
-    fp = fopen(file_name, "a");
-    if (fp == NULL)
-    {
-        printf("Unable to open %d for appending. Nothing to do\n", file_name);
-        exit(0);
-    }
-    // write to the file
-    fprintf(fp, "%e\t%e\t%e\n", x, y, z);
-    // close the file
-    fclose(fp);
-    return 0;
 }

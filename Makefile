@@ -1,6 +1,6 @@
 CC=icpc
 COMMON_FLAGS=-O3 -std=c++11 -o solctra 
-SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp
+SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h
 
 
 all: clean fp-fast
