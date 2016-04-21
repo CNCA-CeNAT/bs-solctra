@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <iostream>
 
-struct coil num_coil[12], vec_e_roof[12], Rmi, Rmf;
+struct coil num_coil[12], vec_e_roof[12];
 float leng_segment[12][360];
 
 void e_roof(void)
@@ -67,7 +67,8 @@ cartesian magnetic_field(const cartesian& point)
     float C;
     for (int i = 0; i < 12; i++)
     {
-        R_vectors(point.x, point.y, point.z, i);
+        struct coil Rmi, Rmf;
+        R_vectors(point, i, Rmi, Rmf);
         for (int j = 0; j < 360; j++)
         {
             norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
@@ -101,16 +102,16 @@ float norm_of(const cartesian& vec)
     return ( norm );
 }
 
-void R_vectors(const float& xx, const float& yy, const float& zz, const int act_coil)
+void R_vectors(const cartesian& point, const int act_coil, struct coil& Rmi, struct coil& Rmf)
 {
     for (int i = 0; i < 360; i++)
     {
-        Rmi.x[i] = xx - num_coil[act_coil].x[i];
-        Rmi.y[i] = yy - num_coil[act_coil].y[i];
-        Rmi.z[i] = zz - num_coil[act_coil].z[i];
-        Rmf.x[i] = xx - num_coil[act_coil].x[i + 1];
-        Rmf.y[i] = yy - num_coil[act_coil].y[i + 1];
-        Rmf.z[i] = zz - num_coil[act_coil].z[i + 1];
+        Rmi.x[i] = point.x - num_coil[act_coil].x[i];
+        Rmi.y[i] = point.y - num_coil[act_coil].y[i];
+        Rmi.z[i] = point.z - num_coil[act_coil].z[i];
+        Rmf.x[i] = point.x - num_coil[act_coil].x[i + 1];
+        Rmf.y[i] = point.y - num_coil[act_coil].y[i + 1];
+        Rmf.z[i] = point.z - num_coil[act_coil].z[i + 1];
     }
 }
 
