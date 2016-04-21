@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <iostream>
 
-struct coil num_coil[12], vec_e_roof[12];
+struct coil num_coil[12], vec_e_roof[12], Rmi, Rmf;
 float leng_segment[12][360];
 
 void e_roof(void)
@@ -61,24 +61,17 @@ void load_coil_data(void)
 
 cartesian magnetic_field(const cartesian& point)
 {
-    cartesian B = {0, 0, 0};
-    cartesian B_thread[12];
-#pragma omp parallel for
+    cartesian B = {0, 0, 0}, V = {0, 0, 0}, U = {0, 0, 0};
+    float norm_Rmi;
+    float norm_Rmf;
+    float C;
     for (int i = 0; i < 12; i++)
     {
-        //float norm_Rmi;
-        //float norm_Rmf;
-        //float C;
-        B_thread[i].x = 0;
-        B_thread[i].y = 0;
-        B_thread[i].z = 0;
-        struct coil Rmi, Rmf;
-        R_vectors(point, i, Rmi, Rmf);
+        R_vectors(point.x, point.y, point.z, i);
         for (int j = 0; j < 360; j++)
         {
-            cartesian U;
-            const float norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
-            const float norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
+            norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
+            norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
 
             //firts vector of cross product in equation 8
             U.x = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].x[j];
@@ -86,25 +79,18 @@ cartesian magnetic_field(const cartesian& point)
             U.z = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].z[j];
 
             //second vector of cross product in equation 8
-            const float C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
+            C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
                  (( 1 ) / ( pow(( norm_Rmi + norm_Rmf ), 2) - pow(leng_segment[i][j], 2))));
 
-            cartesian V;
             V.x = Rmi.x[j] * C;
             V.y = Rmi.y[j] * C;
             V.z = Rmi.z[j] * C;
 
             //cross product in equation 8
-            B_thread[i].x = B_thread[i].x + (( U.y * V.z ) - ( U.z * V.y ));
-            B_thread[i].y = B_thread[i].y - (( U.x * V.z ) - ( U.z * V.x ));
-            B_thread[i].z = B_thread[i].z + (( U.x * V.y ) - ( U.y * V.x ));
+            B.x = B.x + (( U.y * V.z ) - ( U.z * V.y ));
+            B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
+            B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
         }
-    }
-    for(int i = 0 ; i < 12 ; ++i)
-    {
-        B.x += B_thread[i].x;
-        B.y += B_thread[i].y;
-        B.z += B_thread[i].z;
     }
     return B;
 }
@@ -115,16 +101,16 @@ float norm_of(const cartesian& vec)
     return ( norm );
 }
 
-void R_vectors(const cartesian& point, const int act_coil, struct coil& Rmi, struct coil& Rmf)
+void R_vectors(const float& xx, const float& yy, const float& zz, const int act_coil)
 {
     for (int i = 0; i < 360; i++)
     {
-        Rmi.x[i] = point.x - num_coil[act_coil].x[i];
-        Rmi.y[i] = point.y - num_coil[act_coil].y[i];
-        Rmi.z[i] = point.z - num_coil[act_coil].z[i];
-        Rmf.x[i] = point.x - num_coil[act_coil].x[i + 1];
-        Rmf.y[i] = point.y - num_coil[act_coil].y[i + 1];
-        Rmf.z[i] = point.z - num_coil[act_coil].z[i + 1];
+        Rmi.x[i] = xx - num_coil[act_coil].x[i];
+        Rmi.y[i] = yy - num_coil[act_coil].y[i];
+        Rmi.z[i] = zz - num_coil[act_coil].z[i];
+        Rmf.x[i] = xx - num_coil[act_coil].x[i + 1];
+        Rmf.y[i] = yy - num_coil[act_coil].y[i + 1];
+        Rmf.z[i] = zz - num_coil[act_coil].z[i + 1];
     }
 }
 

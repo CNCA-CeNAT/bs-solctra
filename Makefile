@@ -2,6 +2,7 @@ CC=icpc
 COMMON_FLAGS=-O3 -std=c++11 -o solctra -qopenmp
 NO_OMP=-O3 -std=c++11 -o solctra -qopenmp-stubs
 SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h
+#SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp
 
 
 all: clean fp-fast
@@ -23,6 +24,9 @@ debug: $(SOURCE)
 
 noomp: $(SOURCE)
 	$(CC) -fp-model precise -fp-model source $(NO_OMP) $(SOURCE)
+
+gcc: $(SOURCE)
+	g++ -O3 -std=c++11 -o solctra $(SOURCE)
 
 clean:
 	rm -f solctra
