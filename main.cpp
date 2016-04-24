@@ -49,15 +49,16 @@ double getStepSizeFromArgs(const int& argc, char** argv)
 int main(int argc, char** argv)
 {
     cartesian A={0,0,0};          // A:start point of field line
-    Coil** coils = load_coil_data(PATH_TO_RESOURCES);
-    for(unsigned i = 0 ; i < TOTAL_OF_COILS ; ++i)
+    GlobalData data;
+    load_coil_data(data.coils, PATH_TO_RESOURCES);
+    /*for(unsigned i = 0 ; i < TOTAL_OF_COILS ; ++i)
     {
         std::cout << i << std::endl;
         std::cout << coils[i]->x[359] << "\t" << coils[i]->y[359] << "\t" << coils[i]->z[359] << "\t" << std::endl;
         std::cout << coils[i]->x[360] << "\t" << coils[i]->y[360] << "\t" << coils[i]->z[360] << "\t" << std::endl;
         std::cout << coils[i]->x[361] << "\t" << coils[i]->y[361] << "\t" << coils[i]->z[361] << "\t" << std::endl;
-    }
-    e_roof(coils);
+    }*/
+    e_roof(data);
     A.x=2.284e-01;
     A.z=-0.0295;
     const unsigned steps = getStepsFromArgs(argc, argv);
@@ -66,9 +67,8 @@ int main(int argc, char** argv)
     std::cout.precision(precision);
     std::cout << "Running with steps=[" << steps << "] and step size=[" << stepSize << "]." << std::endl;
     const double startTime = getCurrentTime();
-    RK4(coils, A, steps, stepSize, 5, 1);
+    RK4(data, A, steps, stepSize, 5, 1);
     const double endTime = getCurrentTime();
-    Coil::destroyVector(coils);
     std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
 }

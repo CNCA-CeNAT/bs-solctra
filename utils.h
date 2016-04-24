@@ -16,6 +16,11 @@ const unsigned TOTAL_OF_COILS = 12;
 const std::string PATH_TO_RESOURCES = "resources";
 
 
+typedef struct
+{
+    double x, y, z;
+} cartesian;
+
 void* allocateGeneric(const unsigned size);
 double** allocateMatrixOfDoubles(const unsigned x, const unsigned y);
 double* allocateVectorOfDoubles(const unsigned size);

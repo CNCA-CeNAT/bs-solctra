@@ -5,38 +5,13 @@
 
 #include "solctra.h"
 #include "FileHandler.h"
-#include <cstdio>
-#include <cmath>
-#include <cstdlib>
 #include <iostream>
 
-struct Coil vec_e_roof[12];
-double leng_segment[12][360];
-
-void e_roof(Coil** coils)
-{
-    cartesian segment;
-    for (int j = 0; j < TOTAL_OF_COILS; j++)
-    {
-        for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
-        {
-            segment.x = ( coils[j]->x[i + 1] ) - ( coils[j]->x[i] );
-            segment.y = ( coils[j]->y[i + 1] ) - ( coils[j]->y[i] );
-            segment.z = ( coils[j]->z[i + 1] ) - ( coils[j]->z[i] );
-            leng_segment[j][i] = norm_of(segment);
-            vec_e_roof[j].x[i] = segment.x / leng_segment[j][i];
-            vec_e_roof[j].y[i] = segment.y / leng_segment[j][i];
-            vec_e_roof[j].z[i] = segment.z / leng_segment[j][i];
-        }
-    }
-}
-
-Coil** load_coil_data(const std::string& path)
+void load_coil_data(Coil**& coils, const std::string& path)
 {
     char coil_file[30];
     int num, point;
     double x,y,z;
-    Coil** coils = Coil::allocateCoils();
     for (num = 0; num < TOTAL_OF_COILS; num++)
     {
         std::string tmp = path + "/Bobina%dm.txt";
@@ -62,10 +37,49 @@ Coil** load_coil_data(const std::string& path)
             fclose(file_buff);
         }
     }
-    return coils;
 }
 
-cartesian magnetic_field(Coil** coils, const cartesian& point)
+void e_roof(GlobalData& data)
+{
+    cartesian segment;
+    for (int j = 0; j < TOTAL_OF_COILS; j++)
+    {
+#pragma ivdep
+        for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
+        {
+            segment.x = ( data.coils[j]->x[i + 1] ) - ( data.coils[j]->x[i] );
+            segment.y = ( data.coils[j]->y[i + 1] ) - ( data.coils[j]->y[i] );
+            segment.z = ( data.coils[j]->z[i + 1] ) - ( data.coils[j]->z[i] );
+            data.leng_segment[j][i] = norm_of(segment);
+            const double leng_segment_inverted = 1.0 / data.leng_segment[j][i];
+            data.e_roof[j]->x[i] = segment.x * leng_segment_inverted;
+            data.e_roof[j]->y[i] = segment.y * leng_segment_inverted;
+            data.e_roof[j]->z[i] = segment.z * leng_segment_inverted;
+        }
+    }
+}
+
+void R_vectors(Coil** coils, const cartesian& point, const int act_coil, Coil& Rmi, Coil& Rmf)
+{
+//#pragma nounroll
+#pragma ivdep
+    for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
+    {
+        Rmi.x[i] = point.x - coils[act_coil]->x[i];
+        Rmi.y[i] = point.y - coils[act_coil]->y[i];
+        Rmi.z[i] = point.z - coils[act_coil]->z[i];
+    }
+//#pragma nounroll
+#pragma ivdep
+    for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
+    {
+        Rmf.x[i] = point.x - coils[act_coil]->x[i + 1];
+        Rmf.y[i] = point.y - coils[act_coil]->y[i + 1];
+        Rmf.z[i] = point.z - coils[act_coil]->z[i + 1];
+    }
+}
+
+cartesian magnetic_field(const GlobalData& data, const cartesian& point)
 {
     cartesian B = {0, 0, 0}, V = {0, 0, 0}, U = {0, 0, 0};
     double norm_Rmi;
@@ -74,20 +88,20 @@ cartesian magnetic_field(Coil** coils, const cartesian& point)
     for (int i = 0; i < TOTAL_OF_COILS; i++)
     {
         Coil Rmi, Rmf;
-        R_vectors(coils, point, i, Rmi, Rmf);
+        R_vectors(data.coils, point, i, Rmi, Rmf);
         for (int j = 0; j < TOTAL_OF_GRADES; j++)
         {
             norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j]) + ( Rmi.y[j] * Rmi.y[j]) + ( Rmi.z[j] * Rmi.z[j])));
             norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j]) + ( Rmf.y[j] * Rmf.y[j]) + ( Rmf.z[j] * Rmf.z[j])));
 
             //firts vector of cross product in equation 8
-            U.x = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].x[j];
-            U.y = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].y[j];
-            U.z = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].z[j];
+            U.x = (( miu * I ) / ( 4 * PI )) * data.e_roof[i]->x[j];
+            U.y = (( miu * I ) / ( 4 * PI )) * data.e_roof[i]->y[j];
+            U.z = (( miu * I ) / ( 4 * PI )) * data.e_roof[i]->z[j];
 
             //second vector of cross product in equation 8
-            C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
-                 (( 1 ) / ( ( norm_Rmi + norm_Rmf ) * ( norm_Rmi + norm_Rmf ) - leng_segment[i][j] * leng_segment[i][j])));
+            C = ((( 2 * ( data.leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
+                 (( 1 ) / ( ( norm_Rmi + norm_Rmf ) * ( norm_Rmi + norm_Rmf ) - data.leng_segment[i][j] * data.leng_segment[i][j])));
 
             V.x = Rmi.x[j] * C;
             V.y = Rmi.y[j] * C;
@@ -102,26 +116,7 @@ cartesian magnetic_field(Coil** coils, const cartesian& point)
     return B;
 }
 
-double norm_of(const cartesian& vec)
-{
-    double norm = sqrt(( vec.x * vec.x ) + ( vec.y * vec.y ) + ( vec.z * vec.z ));
-    return ( norm );
-}
-
-void R_vectors(Coil** coils, const cartesian& point, const int act_coil, Coil& Rmi, Coil& Rmf)
-{
-    for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
-    {
-        Rmi.x[i] = point.x - coils[act_coil]->x[i];
-        Rmi.y[i] = point.y - coils[act_coil]->y[i];
-        Rmi.z[i] = point.z - coils[act_coil]->z[i];
-        Rmf.x[i] = point.x - coils[act_coil]->x[i + 1];
-        Rmf.y[i] = point.y - coils[act_coil]->y[i + 1];
-        Rmf.z[i] = point.z - coils[act_coil]->z[i + 1];
-    }
-}
-
-void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, const double& step_size, const int path, const int mode)
+void RK4(const GlobalData& data, const cartesian& start_point, const unsigned int steps, const double& step_size, const int path, const int mode)
 {
     cartesian p0;
     cartesian p1 = {0, 0, 0};
@@ -148,7 +143,7 @@ void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, c
 
     for (unsigned i = 1; i < steps; i++)
     {
-        K1 = magnetic_field(coils, p0);
+        K1 = magnetic_field(data, p0);
         norm_temp = norm_of(K1);
         K1.x = ( K1.x / norm_temp ) * step_size;
         K1.y = ( K1.y / norm_temp ) * step_size;
@@ -157,7 +152,7 @@ void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, c
         p1.y = ( K1.y / 2 ) + p0.y;
         p1.z = ( K1.z / 2 ) + p0.z;
 
-        K2 = magnetic_field(coils, p1);
+        K2 = magnetic_field(data, p1);
         norm_temp = norm_of(K2);
         K2.x = ( K2.x / norm_temp ) * step_size;
         K2.y = ( K2.y / norm_temp ) * step_size;
@@ -166,7 +161,7 @@ void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, c
         p2.y = ( K2.y / 2 ) + p0.y;
         p2.z = ( K2.z / 2 ) + p0.z;
 
-        K3 = magnetic_field(coils, p2);
+        K3 = magnetic_field(data, p2);
         norm_temp = norm_of(K3);
         K3.x = ( K3.x / norm_temp ) * step_size;
         K3.y = ( K3.y / norm_temp ) * step_size;
@@ -175,7 +170,7 @@ void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, c
         p3.y = K3.y + p0.y;
         p3.z = K3.z + p0.z;
 
-        K4 = magnetic_field(coils, p3);
+        K4 = magnetic_field(data, p3);
         norm_temp = norm_of(K4);
         K4.x = ( K4.x / norm_temp ) * step_size;
         K4.y = ( K4.y / norm_temp ) * step_size;
@@ -206,7 +201,6 @@ void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, c
         if (0 == i % onePercent)
         {
             actual_state = static_cast<double>(i * 100) * steps_inverse;
-            //printf("el porcentaje completado es %e\n", actual_state);
             std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
         }
     }

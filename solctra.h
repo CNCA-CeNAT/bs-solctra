@@ -6,25 +6,18 @@
 #define SOLCTRA_SOLCTRA_H
 
 #include <string>
+#include <cmath>
 #include "utils.h"
-#include "Coil.h"
+#include "GlobalData.h"
 
-
-
-
-typedef struct
-{
-    double x, y, z;
-} cartesian;
-
-extern struct Coil vec_e_roof[12];
-extern double leng_segment[12][360];
-
-void e_roof(Coil** coils);
-Coil** load_coil_data(const std::string& path);
-cartesian magnetic_field(Coil** coils, const cartesian& point);
-double norm_of(const cartesian& vec);
+void load_coil_data(Coil**& coils, const std::string& path);
+void e_roof(GlobalData& data);
 void R_vectors(Coil** coils, const cartesian& point, const int act_coil, struct Coil& Rmi, struct Coil& Rmf);
-void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, const double& step_size, const int path, const int mode);
+cartesian magnetic_field(const GlobalData& data, const cartesian& point);
+inline double norm_of(const cartesian& vec)
+{
+    return sqrt(( vec.x * vec.x ) + ( vec.y * vec.y ) + ( vec.z * vec.z ));
+}
+void RK4(const GlobalData& data, const cartesian& start_point, const unsigned int steps, const double& step_size, const int path, const int mode);
 
 #endif //SOLCTRA_SOLCTRA_H

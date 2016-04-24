@@ -1,8 +1,10 @@
 CC=icpc
 COMMON_FLAGS=-O3 -std=c++11 -o solctra -qopenmp
 NO_OMP=-O3 -std=c++11 -o solctra -qopenmp-stubs
-SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h Coil.cpp Coil.h
+SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h Coil.cpp Coil.h GlobalData.cpp GlobalData.h
 #SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp
+RPT_FLAGS=-qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openm
+FPF_LAGS=-fp-model precise -fp-model
 
 
 all: clean fp-fast
@@ -17,13 +19,13 @@ fp-source: $(SOURCE)
 	$(CC) -fp-model source $(COMMON_FLAGS) $(SOURCE)
 
 fp-all: $(SOURCE)
-	$(CC) -fp-model precise -fp-model source $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
 
 debug: $(SOURCE)
-	$(CC) -g -fp-model precise -fp-model source $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -g $(COMMON_FLAGS) $(SOURCE)
 
 noomp: $(SOURCE)
-	$(CC) -fp-model precise -fp-model source $(NO_OMP) $(SOURCE)
+	$(CC) ${FP_FLAGS} $(NO_OMP) $(SOURCE)
 
 gcc: $(SOURCE)
 	g++ -O3 -std=c++11 -o solctra $(SOURCE)
