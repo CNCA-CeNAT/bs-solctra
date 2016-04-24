@@ -1,7 +1,7 @@
 CC=icpc
 COMMON_FLAGS=-O3 -std=c++11 -o solctra -qopenmp
 NO_OMP=-O3 -std=c++11 -o solctra -qopenmp-stubs
-SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h
+SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h Coil.cpp Coil.h
 #SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp
 
 

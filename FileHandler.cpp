@@ -44,7 +44,7 @@ void FileHandler::write(const std::string& data)
     handler_<< data << std::endl;
 }
 
-void FileHandler::write(const float& x, const float& y, const float& z)
+void FileHandler::write(const double& x, const double& y, const double& z)
 {
     handler_ << std::scientific;
     handler_ << x << "\t" << y << "\t" << z << std::endl;

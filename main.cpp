@@ -6,7 +6,7 @@
 #include <iostream>
 
 const unsigned DEFAULT_STEPS = 500000;
-const float DEFAULT_STEP_SIZE = 0.001;
+const double DEFAULT_STEP_SIZE = 0.001;
 const unsigned DEFAULT_PRECISION = 5;
 
 unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
@@ -33,7 +33,7 @@ unsigned getStepsFromArgs(const int& argc, char** argv)
     }
     return DEFAULT_STEPS;
 }
-float getStepSizeFromArgs(const int& argc, char** argv)
+double getStepSizeFromArgs(const int& argc, char** argv)
 {
     for(unsigned i = 1 ; i < argc - 1 ; ++i)
     {
@@ -49,18 +49,26 @@ float getStepSizeFromArgs(const int& argc, char** argv)
 int main(int argc, char** argv)
 {
     cartesian A={0,0,0};          // A:start point of field line
-    load_coil_data();
-    e_roof();
+    Coil** coils = load_coil_data(PATH_TO_RESOURCES);
+    for(unsigned i = 0 ; i < TOTAL_OF_COILS ; ++i)
+    {
+        std::cout << i << std::endl;
+        std::cout << coils[i]->x[359] << "\t" << coils[i]->y[359] << "\t" << coils[i]->z[359] << "\t" << std::endl;
+        std::cout << coils[i]->x[360] << "\t" << coils[i]->y[360] << "\t" << coils[i]->z[360] << "\t" << std::endl;
+        std::cout << coils[i]->x[361] << "\t" << coils[i]->y[361] << "\t" << coils[i]->z[361] << "\t" << std::endl;
+    }
+    e_roof(coils);
     A.x=2.284e-01;
     A.z=-0.0295;
     const unsigned steps = getStepsFromArgs(argc, argv);
-    const float stepSize = getStepSizeFromArgs(argc, argv);
+    const double stepSize = getStepSizeFromArgs(argc, argv);
     const unsigned precision = getPrintPrecisionFromArgs(argc, argv);
     std::cout.precision(precision);
     std::cout << "Running with steps=[" << steps << "] and step size=[" << stepSize << "]." << std::endl;
     const double startTime = getCurrentTime();
-    RK4(A, steps, stepSize, 5, 1);
+    RK4(coils, A, steps, stepSize, 5, 1);
     const double endTime = getCurrentTime();
+    Coil::destroyVector(coils);
     std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
 }

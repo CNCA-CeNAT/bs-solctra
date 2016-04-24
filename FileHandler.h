@@ -15,7 +15,7 @@ public:
     FileHandler(const std::string& path);
     FileHandler(const std::string& path, bool overwrite);
     void write(const std::string& data);
-    void write(const float& x, const float& y, const float& z);
+    void write(const double& x, const double& y, const double& z);
     void close();
 
 private:

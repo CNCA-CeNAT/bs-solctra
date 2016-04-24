@@ -10,19 +10,19 @@
 #include <cstdlib>
 #include <iostream>
 
-struct coil num_coil[12], vec_e_roof[12];
-float leng_segment[12][360];
+struct Coil vec_e_roof[12];
+double leng_segment[12][360];
 
-void e_roof(void)
+void e_roof(Coil** coils)
 {
     cartesian segment;
-    for (int j = 0; j < 12; j++)
+    for (int j = 0; j < TOTAL_OF_COILS; j++)
     {
-        for (int i = 0; i < 360; i++)
+        for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
         {
-            segment.x = ( num_coil[j].x[i + 1] ) - ( num_coil[j].x[i] );
-            segment.y = ( num_coil[j].y[i + 1] ) - ( num_coil[j].y[i] );
-            segment.z = ( num_coil[j].z[i + 1] ) - ( num_coil[j].z[i] );
+            segment.x = ( coils[j]->x[i + 1] ) - ( coils[j]->x[i] );
+            segment.y = ( coils[j]->y[i + 1] ) - ( coils[j]->y[i] );
+            segment.z = ( coils[j]->z[i + 1] ) - ( coils[j]->z[i] );
             leng_segment[j][i] = norm_of(segment);
             vec_e_roof[j].x[i] = segment.x / leng_segment[j][i];
             vec_e_roof[j].y[i] = segment.y / leng_segment[j][i];
@@ -31,14 +31,17 @@ void e_roof(void)
     }
 }
 
-void load_coil_data(void)
+Coil** load_coil_data(const std::string& path)
 {
     char coil_file[30];
     int num, point;
-    for (num = 0; num < 12; num++)
+    double x,y,z;
+    Coil** coils = Coil::allocateCoils();
+    for (num = 0; num < TOTAL_OF_COILS; num++)
     {
-        //Set coil files location
-        sprintf(coil_file, "resources/Bobina%dm.txt", num);
+        std::string tmp = path + "/Bobina%dm.txt";
+        //Set Coil files location
+        sprintf(coil_file, tmp.c_str(), num);
         //create buffer
         FILE* file_buff;
         //Open file
@@ -49,30 +52,33 @@ void load_coil_data(void)
         }
         else
         {
-            for (point = 0; point < 361; point++)
+            for (point = 0; point < TOTAL_OF_GRADES + 1; point++)
             {
-                fscanf(file_buff, "%e %e %e", &num_coil[num].x[point], &num_coil[num].y[point], &num_coil[num]
-                        .z[point]);
+                fscanf(file_buff, "%le %le %le", &x, &y, &z);
+                coils[num]->x[point] = x;
+                coils[num]->y[point] = y;
+                coils[num]->z[point] = z;
             }
             fclose(file_buff);
         }
     }
+    return coils;
 }
 
-cartesian magnetic_field(const cartesian& point)
+cartesian magnetic_field(Coil** coils, const cartesian& point)
 {
     cartesian B = {0, 0, 0}, V = {0, 0, 0}, U = {0, 0, 0};
-    float norm_Rmi;
-    float norm_Rmf;
-    float C;
-    for (int i = 0; i < 12; i++)
+    double norm_Rmi;
+    double norm_Rmf;
+    double C;
+    for (int i = 0; i < TOTAL_OF_COILS; i++)
     {
-        struct coil Rmi, Rmf;
-        R_vectors(point, i, Rmi, Rmf);
-        for (int j = 0; j < 360; j++)
+        Coil Rmi, Rmf;
+        R_vectors(coils, point, i, Rmi, Rmf);
+        for (int j = 0; j < TOTAL_OF_GRADES; j++)
         {
-            norm_Rmi = sqrt((( pow(Rmi.x[j], 2)) + ( pow(Rmi.y[j], 2)) + ( pow(Rmi.z[j], 2))));
-            norm_Rmf = sqrt((( pow(Rmf.x[j], 2)) + ( pow(Rmf.y[j], 2)) + ( pow(Rmf.z[j], 2))));
+            norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j]) + ( Rmi.y[j] * Rmi.y[j]) + ( Rmi.z[j] * Rmi.z[j])));
+            norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j]) + ( Rmf.y[j] * Rmf.y[j]) + ( Rmf.z[j] * Rmf.z[j])));
 
             //firts vector of cross product in equation 8
             U.x = (( miu * I ) / ( 4 * PI )) * vec_e_roof[i].x[j];
@@ -81,7 +87,7 @@ cartesian magnetic_field(const cartesian& point)
 
             //second vector of cross product in equation 8
             C = ((( 2 * ( leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
-                 (( 1 ) / ( pow(( norm_Rmi + norm_Rmf ), 2) - pow(leng_segment[i][j], 2))));
+                 (( 1 ) / ( ( norm_Rmi + norm_Rmf ) * ( norm_Rmi + norm_Rmf ) - leng_segment[i][j] * leng_segment[i][j])));
 
             V.x = Rmi.x[j] * C;
             V.y = Rmi.y[j] * C;
@@ -96,26 +102,26 @@ cartesian magnetic_field(const cartesian& point)
     return B;
 }
 
-float norm_of(const cartesian& vec)
+double norm_of(const cartesian& vec)
 {
-    float norm = sqrt(( vec.x * vec.x ) + ( vec.y * vec.y ) + ( vec.z * vec.z ));
+    double norm = sqrt(( vec.x * vec.x ) + ( vec.y * vec.y ) + ( vec.z * vec.z ));
     return ( norm );
 }
 
-void R_vectors(const cartesian& point, const int act_coil, struct coil& Rmi, struct coil& Rmf)
+void R_vectors(Coil** coils, const cartesian& point, const int act_coil, Coil& Rmi, Coil& Rmf)
 {
-    for (int i = 0; i < 360; i++)
+    for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
     {
-        Rmi.x[i] = point.x - num_coil[act_coil].x[i];
-        Rmi.y[i] = point.y - num_coil[act_coil].y[i];
-        Rmi.z[i] = point.z - num_coil[act_coil].z[i];
-        Rmf.x[i] = point.x - num_coil[act_coil].x[i + 1];
-        Rmf.y[i] = point.y - num_coil[act_coil].y[i + 1];
-        Rmf.z[i] = point.z - num_coil[act_coil].z[i + 1];
+        Rmi.x[i] = point.x - coils[act_coil]->x[i];
+        Rmi.y[i] = point.y - coils[act_coil]->y[i];
+        Rmi.z[i] = point.z - coils[act_coil]->z[i];
+        Rmf.x[i] = point.x - coils[act_coil]->x[i + 1];
+        Rmf.y[i] = point.y - coils[act_coil]->y[i + 1];
+        Rmf.z[i] = point.z - coils[act_coil]->z[i + 1];
     }
 }
 
-void RK4(const cartesian& start_point, const unsigned int steps, const float& step_size, const int path, const int mode)
+void RK4(Coil** coils, const cartesian& start_point, const unsigned int steps, const double& step_size, const int path, const int mode)
 {
     cartesian p0;
     cartesian p1 = {0, 0, 0};
@@ -128,19 +134,21 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
     cartesian Ovect = {0, 0, 0};
     cartesian p = {0, 0, 0};
     cartesian r_vector;
-    float norm_temp;
-    float r_radius;
-    float actual_state;
+    double norm_temp;
+    double r_radius;
+    double actual_state;
 
     FileHandler handler(path);
 
     handler.write(start_point.x, start_point.y, start_point.z);
 
     p0 = start_point;
+    const double steps_inverse = static_cast<double>(1) / steps;
+    const int onePercent = static_cast<int>(steps / 100);
 
     for (unsigned i = 1; i < steps; i++)
     {
-        K1 = magnetic_field(p0);
+        K1 = magnetic_field(coils, p0);
         norm_temp = norm_of(K1);
         K1.x = ( K1.x / norm_temp ) * step_size;
         K1.y = ( K1.y / norm_temp ) * step_size;
@@ -149,7 +157,7 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         p1.y = ( K1.y / 2 ) + p0.y;
         p1.z = ( K1.z / 2 ) + p0.z;
 
-        K2 = magnetic_field(p1);
+        K2 = magnetic_field(coils, p1);
         norm_temp = norm_of(K2);
         K2.x = ( K2.x / norm_temp ) * step_size;
         K2.y = ( K2.y / norm_temp ) * step_size;
@@ -158,7 +166,7 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         p2.y = ( K2.y / 2 ) + p0.y;
         p2.z = ( K2.z / 2 ) + p0.z;
 
-        K3 = magnetic_field(p2);
+        K3 = magnetic_field(coils, p2);
         norm_temp = norm_of(K3);
         K3.x = ( K3.x / norm_temp ) * step_size;
         K3.y = ( K3.y / norm_temp ) * step_size;
@@ -167,7 +175,7 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
         p3.y = K3.y + p0.y;
         p3.z = K3.z + p0.z;
 
-        K4 = magnetic_field(p3);
+        K4 = magnetic_field(coils, p3);
         norm_temp = norm_of(K4);
         K4.x = ( K4.x / norm_temp ) * step_size;
         K4.y = ( K4.y / norm_temp ) * step_size;
@@ -195,9 +203,9 @@ void RK4(const cartesian& start_point, const unsigned int steps, const float& st
                 break;
             }
         }
-        actual_state = static_cast<float>(i * 100) / static_cast<float>(steps);
-        if (actual_state <= 10)
+        if (0 == i % onePercent)
         {
+            actual_state = static_cast<double>(i * 100) * steps_inverse;
             //printf("el porcentaje completado es %e\n", actual_state);
             std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
         }
