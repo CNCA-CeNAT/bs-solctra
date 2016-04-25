@@ -12,7 +12,7 @@
 
 void load_coil_data(Coil**& coils, const std::string& path);
 void e_roof(GlobalData& data);
-void R_vectors(Coil** coils, const cartesian& point, const int act_coil, struct Coil& Rmi, struct Coil& Rmf);
+void R_vectors(Coil* coil, const cartesian& point, Coil& Rmi, Coil& Rmf);
 cartesian magnetic_field(const GlobalData& data, const cartesian& point);
 inline double norm_of(const cartesian& vec)
 {

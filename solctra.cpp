@@ -59,50 +59,59 @@ void e_roof(GlobalData& data)
     }
 }
 
-void R_vectors(Coil** coils, const cartesian& point, const int act_coil, Coil& Rmi, Coil& Rmf)
+void R_vectors(Coil* coil, const cartesian& point, Coil& Rmi, Coil& Rmf)
 {
 //#pragma nounroll
 #pragma ivdep
+#pragma vector aligned
     for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
     {
-        Rmi.x[i] = point.x - coils[act_coil]->x[i];
-        Rmi.y[i] = point.y - coils[act_coil]->y[i];
-        Rmi.z[i] = point.z - coils[act_coil]->z[i];
+        Rmi.x[i] = point.x - coil->x[i];
+        Rmi.y[i] = point.y - coil->y[i];
+        Rmi.z[i] = point.z - coil->z[i];
     }
 //#pragma nounroll
 #pragma ivdep
+//This gives a segmentation fault
+//#pragma vector aligned
     for (unsigned i = 0; i < TOTAL_OF_GRADES; i++)
     {
-        Rmf.x[i] = point.x - coils[act_coil]->x[i + 1];
-        Rmf.y[i] = point.y - coils[act_coil]->y[i + 1];
-        Rmf.z[i] = point.z - coils[act_coil]->z[i + 1];
+        Rmf.x[i] = point.x - coil->x[i + 1];
+        Rmf.y[i] = point.y - coil->y[i + 1];
+        Rmf.z[i] = point.z - coil->z[i + 1];
     }
 }
 
 cartesian magnetic_field(const GlobalData& data, const cartesian& point)
 {
-    cartesian B = {0, 0, 0}, V = {0, 0, 0}, U = {0, 0, 0};
-    double norm_Rmi;
-    double norm_Rmf;
-    double C;
+    cartesian* B_perIteration = new cartesian[TOTAL_OF_COILS];
+#pragma omp parallel for
     for (int i = 0; i < TOTAL_OF_COILS; i++)
     {
+        B_perIteration[i].x = 0;
+        B_perIteration[i].y = 0;
+        B_perIteration[i].z = 0;
+        cartesian B = {0, 0, 0};
         Coil Rmi, Rmf;
-        R_vectors(data.coils, point, i, Rmi, Rmf);
+        R_vectors(data.coils[i], point, Rmi, Rmf);
+#pragma ivdep
+#pragma vector aligned
         for (int j = 0; j < TOTAL_OF_GRADES; j++)
         {
-            norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j]) + ( Rmi.y[j] * Rmi.y[j]) + ( Rmi.z[j] * Rmi.z[j])));
-            norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j]) + ( Rmf.y[j] * Rmf.y[j]) + ( Rmf.z[j] * Rmf.z[j])));
+            const double norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j]) + ( Rmi.y[j] * Rmi.y[j]) + ( Rmi.z[j] * Rmi.z[j])));
+            const double norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j]) + ( Rmf.y[j] * Rmf.y[j]) + ( Rmf.z[j] * Rmf.z[j])));
 
             //firts vector of cross product in equation 8
+            cartesian U;
             U.x = (( miu * I ) / ( 4 * PI )) * data.e_roof[i]->x[j];
             U.y = (( miu * I ) / ( 4 * PI )) * data.e_roof[i]->y[j];
             U.z = (( miu * I ) / ( 4 * PI )) * data.e_roof[i]->z[j];
 
             //second vector of cross product in equation 8
-            C = ((( 2 * ( data.leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
+            const double C = ((( 2 * ( data.leng_segment[i][j] ) * ( norm_Rmi + norm_Rmf )) / ( norm_Rmi * norm_Rmf )) *
                  (( 1 ) / ( ( norm_Rmi + norm_Rmf ) * ( norm_Rmi + norm_Rmf ) - data.leng_segment[i][j] * data.leng_segment[i][j])));
 
+            cartesian V;
             V.x = Rmi.x[j] * C;
             V.y = Rmi.y[j] * C;
             V.z = Rmi.z[j] * C;
@@ -112,6 +121,16 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
             B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
             B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
         }
+        B_perIteration[i].x += B.x;
+        B_perIteration[i].y -= B.y;
+        B_perIteration[i].z += B.z;
+    }
+    cartesian B = {0, 0, 0};
+    for (int i = 0; i < TOTAL_OF_COILS; i++)
+    {
+        B.x += B_perIteration[i].x;
+        B.y -= B_perIteration[i].y;
+        B.z += B_perIteration[i].z;
     }
     return B;
 }
