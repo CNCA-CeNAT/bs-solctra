@@ -90,35 +90,44 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
 {
     const int threads = omp_get_max_threads();
     cartesian* B_perIteration = new cartesian[threads];
-//#pragma omp parallel
+#pragma omp parallel
     {
-        //const int myThread = omp_get_thread_num();
-        const int myThread = 0;
+        const int myThread = omp_get_thread_num();
+        //const int myThread = 0;
         B_perIteration[myThread].x = 0;
         B_perIteration[myThread].y = 0;
         B_perIteration[myThread].z = 0;
         Coil Rmi, Rmf;
-        double rmiX[TOTAL_OF_COILS + 1] __attribute__((aligned(64)));
-        double rmiY[TOTAL_OF_COILS + 1] __attribute__((aligned(64)));
-        double rmiZ[TOTAL_OF_COILS + 1] __attribute__((aligned(64)));
-        double rmfX[TOTAL_OF_COILS + 1] __attribute__((aligned(64)));
-        double rmfY[TOTAL_OF_COILS + 1] __attribute__((aligned(64)));
-        double rmfZ[TOTAL_OF_COILS + 1] __attribute__((aligned(64)));
+        double rmiX[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
+        double rmiY[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
+        double rmiZ[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
+        double rmfX[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
+        double rmfY[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
+        double rmfZ[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
         Rmi.x = rmiX;
         Rmi.y = rmiY;
         Rmi.z = rmiZ;
         Rmf.x = rmfX;
         Rmf.y = rmfY;
         Rmf.z = rmfZ;
-//#pragma omp for
+        //Rmi.x = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
+        //Rmi.y = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
+        //Rmi.z = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
+        //Rmf.x = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
+        //Rmf.y = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
+        //Rmf.z = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
+        //std::cout << "before for" << std::endl;
+#pragma omp for
         for (int i = 0; i < TOTAL_OF_COILS; i++)
         {
             cartesian B = {0, 0, 0};
             const int base = i * TOTAL_OF_GRADES_PADDED;
+            //std::cout << "before R_vectors" << std::endl;
             R_vectors(&data.coils.x[base], &data.coils.y[base], &data.coils.z[base], point, Rmi, Rmf);
+            //std::cout << "after R_vectors" << std::endl;
             const double multiplier = ( miu * I ) / ( 4 * PI );
-//#pragma ivdep
-//#pragma vector aligned
+#pragma ivdep
+#pragma vector aligned
             for (int j = 0; j < TOTAL_OF_GRADES; j++)
             {
                 const double norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j] ) + ( Rmi.y[j] * Rmi.y[j] ) +
@@ -148,12 +157,22 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
                 B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
                 B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
             }
+            //std::cout << "after for for" << std::endl;
             B_perIteration[myThread].x += B.x;
             B_perIteration[myThread].y -= B.y;
             B_perIteration[myThread].z += B.z;
         }
+        //std::cout << "after for" << std::endl;
+        //_mm_free(Rmi.x);
+        //std::cout << "after free x" << std::endl;
+        //_mm_free(Rmi.y);
+        //_mm_free(Rmi.z);
+        //_mm_free(Rmf.x);
+        //_mm_free(Rmf.y);
+        //_mm_free(Rmf.z);
+        //std::cout << "after deletes" << std::endl;
     }
-    std::cout << "after for." << std::endl;
+    //std::cout << "after omp parallel." << std::endl;
     cartesian B = {0.0, 0.0, 0.0};
     for (int i = 0; i < threads; i++)
     {
@@ -161,10 +180,10 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
         B.y -= B_perIteration[i].y;
         B.z += B_perIteration[i].z;
     }
-    std::cout << "after forfor." << std::endl;
+    //std::cout << "after forfor." << std::endl;
     delete[] B_perIteration;
-    std::cout << "after delete." << std::endl;
-    B.print();
+    //std::cout << "after delete." << std::endl;
+    //B.print();
     return B;
 }
 
@@ -197,7 +216,7 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
     for (int i = 1; i < steps; i++)
     {
         K1 = magnetic_field(data, p0);
-        std::cout << "After magnetic fields." << std::endl;
+        //std::cout << "After magnetic fields." << std::endl;
         norm_temp = 1.0 / norm_of(K1);
         K1.x = ( K1.x * norm_temp ) * step_size;
         K1.y = ( K1.y * norm_temp ) * step_size;

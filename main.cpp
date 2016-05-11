@@ -106,51 +106,42 @@ int main(int argc, char** argv)
 
     cartesian A={0,0,0};          // A:start point of field line
     //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //const size_t sizeToAllocate = sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS;
-    //double* x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    //double* y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    //double* z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    //double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    const size_t sizeToAllocate = sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS;
+    GlobalData data;
+    data.coils.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.coils.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.coils.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     if(0 == myRank)
     {
-        load_coil_data(x, y, z, PATH_TO_RESOURCES);
+        load_coil_data(data.coils.x, data.coils.y, data.coils.z, PATH_TO_RESOURCES);
         //std::cout << x[TOTAL_OF_GRADES_PADDED] << "|" << y[TOTAL_OF_GRADES_PADDED] << "|" << z[TOTAL_OF_GRADES_PADDED] << std::endl;
         //std::cout << x[TOTAL_OF_GRADES_PADDED*2] << "|" << y[TOTAL_OF_GRADES_PADDED*2] << "|" << z[TOTAL_OF_GRADES_PADDED*2] << std::endl;
     }
-    MPI_Bcast(&x, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&y, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&z, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    /*for(unsigned i = 0 ; i < TOTAL_OF_COILS ; ++i)
-    {
-        std::cout << i << std::endl;
-        std::cout << coils[i]->x[359] << "\t" << coils[i]->y[359] << "\t" << coils[i]->z[359] << "\t" << std::endl;
-        std::cout << coils[i]->x[360] << "\t" << coils[i]->y[360] << "\t" << coils[i]->z[360] << "\t" << std::endl;
-        std::cout << coils[i]->x[361] << "\t" << coils[i]->y[361] << "\t" << coils[i]->z[361] << "\t" << std::endl;
-    }*/
-    GlobalData data;
-    data.coils.x = x;
-    data.coils.y = y;
-    data.coils.z = z;
-    double eRoofX[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    double eRoofY[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    double eRoofZ[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double* eRoofX = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    //double* eRoofY = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    //double* eRoofZ = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    double leng_segment[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    data.e_roof.x = eRoofX;
-    data.e_roof.y = eRoofY;
-    data.e_roof.z = eRoofZ;
-    data.leng_segment = leng_segment;
+    MPI_Bcast(data.coils.x, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(data.coils.y, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(data.coils.z, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //double eRoofX[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    //double eRoofY[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    //double eRoofZ[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    //double leng_segment[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    //data.e_roof.x = eRoofX;
+    //data.e_roof.y = eRoofY;
+    //data.e_roof.z = eRoofZ;
+    //data.leng_segment = leng_segment;
+    data.e_roof.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.e_roof.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.e_roof.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.leng_segment = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     if(0 == myRank)
     {
         e_roof(data);
     }
-    MPI_Bcast(&eRoofX, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&eRoofY, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&eRoofZ, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&leng_segment, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(data.e_roof.x, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(data.e_roof.y, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(data.e_roof.z, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(data.leng_segment, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     A.x=2.284e-01;
     A.z=-0.0295;
 
@@ -163,12 +154,16 @@ int main(int argc, char** argv)
     {
         RK4(data, A, steps, stepSize, 5, mode);
     }
-    std::cout << myRank << " before finalize barrier!" << std::endl;
+    std::cout << "Rank=" << myRank << " before finalize barrier!" << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     const double endTime = getCurrentTime();
-    delete x;
-    delete y;
-    delete z;
+    _mm_free(data.coils.x);
+    _mm_free(data.coils.y);
+    _mm_free(data.coils.z);
+    _mm_free(data.e_roof.x);
+    _mm_free(data.e_roof.y);
+    _mm_free(data.e_roof.z);
+    _mm_free(data.leng_segment);
     MPI_Finalize();
     std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
