@@ -6,24 +6,45 @@
 #define SOLCTRA_UTILS_H
 
 #include <string>
+#include <iostream>
 
 #define     PI      3.141592654
 #define     miu     1.2566e-06
 #define     I       -4350
-const unsigned ALIGNMENT_SIZE = 64;
-const unsigned TOTAL_OF_GRADES = 360;
-const unsigned TOTAL_OF_COILS = 12;
-const std::string PATH_TO_RESOURCES = "resources";
+#define ALIGNMENT_SIZE 64
+#define TOTAL_OF_GRADES 360
+#define TOTAL_OF_GRADES_PADDED 384
+#define TOTAL_OF_COILS 12
+#define PATH_TO_RESOURCES "resources"
 
 
-typedef struct
+struct cartesian
 {
     double x, y, z;
-} cartesian;
+    void print()
+    {
+        std::cout << "X=[" << x << "]. Y=[" << y << "]. Z=[" << z << "]." << std::endl;
+    }
+};
 
-void* allocateGeneric(const unsigned size);
-double** allocateMatrixOfDoubles(const unsigned x, const unsigned y);
-double* allocateVectorOfDoubles(const unsigned size);
+
+struct Coil
+{
+    double* x;
+    double* y;
+    double* z;
+
+};
+struct GlobalData
+{
+    Coil coils;
+    Coil e_roof;
+    double* leng_segment;
+};
+
+void* allocateGeneric(const int size);
+double** allocateMatrixOfDoubles(const int x, const int y);
+double* allocateVectorOfDoubles(const int size);
 void deallocateGeneric(void* pointer);
 void deallocate(double** matrix);
 void deallocate(double* vector);

@@ -28,24 +28,24 @@ double getCurrentTime()
 }
 
 
-void* allocateGeneric(const unsigned size)
+void* allocateGeneric(const int size)
 {
     return _mm_malloc(size, ALIGNMENT_SIZE);
 }
 
-double** allocateMatrixOfDoubles(const unsigned x, const unsigned y)
+double** allocateMatrixOfDoubles(const int x, const int y)
 {
-    double** matrix = (double**) _mm_malloc(sizeof(double*) * x, ALIGNMENT_SIZE);
-    for(unsigned i = 0 ; i < x; ++i)
+    double** matrix = static_cast<double**>(_mm_malloc(sizeof(double*) * x, ALIGNMENT_SIZE));
+    for(int i = 0 ; i < x; ++i)
     {
-        matrix[i] = (double*) _mm_malloc(sizeof(double) * y, ALIGNMENT_SIZE);
+        matrix[i] = static_cast<double*>(_mm_malloc(sizeof(double) * y, ALIGNMENT_SIZE));
     }
     return matrix;
 }
 
-double* allocateVectorOfDoubles(const unsigned size)
+double* allocateVectorOfDoubles(const int size)
 {
-    return (double*) _mm_malloc(sizeof(double) * size, ALIGNMENT_SIZE);
+    return static_cast<double*>(_mm_malloc(sizeof(double) * size, ALIGNMENT_SIZE));
 }
 
 void deallocateGeneric(void* pointer)
