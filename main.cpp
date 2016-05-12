@@ -1,6 +1,5 @@
 
 #include "solctra.h"
-#include <iostream>
 #include <mpi.h>
 
 const unsigned DEFAULT_STEPS = 500000;
@@ -142,8 +141,6 @@ int main(int argc, char** argv)
     MPI_Bcast(data.e_roof.y, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.e_roof.z, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.leng_segment, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    A.x=2.284e-01;
-    A.z=-0.0295;
 
     const double startTime = getCurrentTime();
     if(particles > 1)
@@ -152,6 +149,8 @@ int main(int argc, char** argv)
     }
     else if(0 == myRank)
     {
+        A.x=2.284e-01;
+        A.z=-0.0295;
         RK4(data, A, steps, stepSize, 5, mode);
     }
     std::cout << "Rank=" << myRank << " before finalize barrier!" << std::endl;

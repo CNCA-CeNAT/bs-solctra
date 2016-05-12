@@ -5,8 +5,8 @@
 
 #include "solctra.h"
 #include "FileHandler.h"
-#include <iostream>
 #include <omp.h>
+#include <mpi.h>
 
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
@@ -281,13 +281,21 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
 
 void runParticles(const GlobalData& data, const int particles, const int steps, const double& step_size, const int mode)
 {
+    int myRank;
+    int commSize;
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     cartesian A={0,0,0};
     for(int i=0; i < particles ; ++i)
     {
-        //A.z=-0.02111;
-        A.x=1.87451e-01+0.00474228/2*i;
-        //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i; 
-      
-        RK4(data, A,steps,step_size,i, mode);
+        if(i % commSize == myRank)
+        {
+            //A.z=-0.02111;
+            A.x=1.87451e-01+0.00474228/2*i;
+            //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
+            std::cout << "Rank=[" << myRank << "] working on particle=[" << i << "] with initial point=";
+            A.print();
+            RK4(data, A,steps,step_size,i, mode);
+        }
     }
 }
