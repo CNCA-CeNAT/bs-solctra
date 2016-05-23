@@ -6,7 +6,6 @@
 #include "solctra.h"
 #include "FileHandler.h"
 #include <omp.h>
-#include <mpi.h>
 
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
@@ -42,21 +41,25 @@ void load_coil_data(double* x, double* y, double* z, const std::string& path)
 
 void e_roof(GlobalData& data)
 {
-    cartesian segment;
-    for (int j = 0; j < TOTAL_OF_COILS; j++)
+#pragma omp parallel
     {
-        const int base = j * TOTAL_OF_GRADES_PADDED;
-#pragma ivdep
-        for (int i = 0; i < TOTAL_OF_GRADES; i++)
+        cartesian segment;
+#pragma omp for
+        for (int j = 0; j < TOTAL_OF_COILS; j++)
         {
-            segment.x = ( data.coils.x[base + i + 1] ) - ( data.coils.x[base + i] );
-            segment.y = ( data.coils.y[base + i + 1] ) - ( data.coils.y[base + i] );
-            segment.z = ( data.coils.z[base + i + 1] ) - ( data.coils.z[base + i] );
-            data.leng_segment[base + i] = norm_of(segment);
-            const double leng_segment_inverted = 1.0 / data.leng_segment[base + i];
-            data.e_roof.x[base + i] = segment.x * leng_segment_inverted;
-            data.e_roof.y[base + i] = segment.y * leng_segment_inverted;
-            data.e_roof.z[base + i] = segment.z * leng_segment_inverted;
+            const int base = j * TOTAL_OF_GRADES_PADDED;
+#pragma ivdep
+            for (int i = 0; i < TOTAL_OF_GRADES; i++)
+            {
+                segment.x = ( data.coils.x[base + i + 1] ) - ( data.coils.x[base + i] );
+                segment.y = ( data.coils.y[base + i + 1] ) - ( data.coils.y[base + i] );
+                segment.z = ( data.coils.z[base + i + 1] ) - ( data.coils.z[base + i] );
+                data.leng_segment[base + i] = norm_of(segment);
+                const double leng_segment_inverted = 1.0 / data.leng_segment[base + i];
+                data.e_roof.x[base + i] = segment.x * leng_segment_inverted;
+                data.e_roof.y[base + i] = segment.y * leng_segment_inverted;
+                data.e_roof.z[base + i] = segment.z * leng_segment_inverted;
+            }
         }
     }
 }
@@ -271,7 +274,7 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
                 break;
             }
         }
-        if (0 == i % onePercent)
+        if (0 == i % (onePercent * 10))
         {
             actual_state = static_cast<double>(i * 100) * steps_inverse;
             std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
@@ -281,21 +284,18 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
 
 void runParticles(const GlobalData& data, const int particles, const int steps, const double& step_size, const int mode)
 {
-    int myRank;
-    int commSize;
-    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     cartesian A={0,0,0};
+#pragma omp parallel for
     for(int i=0; i < particles ; ++i)
     {
-        if(i % commSize == myRank)
+        //A.z=-0.02111;
+        A.x=1.87451e-01+0.00474228/2*i;
+        //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
+#pragma omp critical
         {
-            //A.z=-0.02111;
-            A.x=1.87451e-01+0.00474228/2*i;
-            //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
-            std::cout << "Rank=[" << myRank << "] working on particle=[" << i << "] with initial point=";
+            std::cout << "Working on particle=[" << i << "] with initial point=";
             A.print();
-            RK4(data, A,steps,step_size,i, mode);
         }
+        RK4(data, A,steps,step_size,i, mode);
     }
 }

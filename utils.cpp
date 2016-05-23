@@ -8,7 +8,6 @@
 
 #ifndef __INTEL_COMPILER
 
-#include <cstdlib>
 void* _mm_malloc(size_t size, size_t /*alignment*/)
 {
     return malloc(size);
