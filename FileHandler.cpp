@@ -7,7 +7,7 @@
 
 FileHandler::FileHandler(const int id)
 {
-    path_ = "results/path" + std::to_string(static_cast<long long>(id)) + ".txt";
+    path_ = "results/path" + std::to_string(id) + ".txt";
     open(true);
 }
 
