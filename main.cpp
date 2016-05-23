@@ -1,6 +1,8 @@
 
 #include "solctra.h"
 #include <mpi.h>
+#include <omp.h>
+#include <fstream>
 
 const unsigned DEFAULT_STEPS = 500000;
 const double DEFAULT_STEP_SIZE = 0.001;
@@ -10,7 +12,7 @@ const unsigned DEFAULT_MODE= 1;
 
 unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
 {
-    for(unsigned i = 1 ; i < argc - 1 ; ++i)
+    for(int i = 1 ; i < argc - 1 ; ++i)
     {
         std::string tmp = argv[i];
         if(tmp == "-precision")
@@ -22,7 +24,7 @@ unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
 }
 unsigned getStepsFromArgs(const int& argc, char** argv)
 {
-    for(unsigned i = 1 ; i < argc - 1 ; ++i)
+    for(int i = 1 ; i < argc - 1 ; ++i)
     {
         std::string tmp = argv[i];
         if(tmp == "-steps")
@@ -34,7 +36,7 @@ unsigned getStepsFromArgs(const int& argc, char** argv)
 }
 double getStepSizeFromArgs(const int& argc, char** argv)
 {
-    for(unsigned i = 1 ; i < argc - 1 ; ++i)
+    for(int i = 1 ; i < argc - 1 ; ++i)
     {
         std::string tmp = argv[i];
         if(tmp == "-stepSize")
@@ -46,7 +48,7 @@ double getStepSizeFromArgs(const int& argc, char** argv)
 }
 unsigned getParticlesFromArgs(const int& argc, char** argv)
 {
-    for(unsigned i = 1 ; i < argc - 1 ; ++i)
+    for(int i = 1 ; i < argc - 1 ; ++i)
     {
         std::string tmp = argv[i];
         if(tmp == "-particles")
@@ -58,7 +60,7 @@ unsigned getParticlesFromArgs(const int& argc, char** argv)
 }
 unsigned getModeFromArgs(const int& argc, char** argv)
 {
-    for(unsigned i = 1 ; i < argc - 1 ; ++i)
+    for(int i = 1 ; i < argc - 1 ; ++i)
     {
         std::string tmp = argv[i];
         if(tmp == "-mode")
@@ -76,11 +78,13 @@ int main(int argc, char** argv)
     int commSize;
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    const int ompSize = omp_get_max_threads();
     unsigned steps;
     double stepSize;
     unsigned precision;
     unsigned int particles;
     unsigned int mode;
+    std::ofstream handler;
     if(0 == myRank)
     {
         std::cout << "Communicator Size=[" << commSize << "]." << std::endl;
@@ -95,6 +99,22 @@ int main(int argc, char** argv)
         std::cout << "Steps size=[" << stepSize << "]." << std::endl;
         std::cout << "Particles=[" << particles << "]." << std::endl;
         std::cout << "Mode=[" << mode << "]." << std::endl;
+        std::cout << "MPI size=[" << commSize << "]." << std::endl;
+        std::cout << "OpenMP size=[" << ompSize << "]." << std::endl;
+        handler.open("stdout.log");
+        if(!handler.is_open())
+        {
+            std::cerr << "Unable to open stdout.log for appending. Nothing to do." << std::endl;
+            exit(0);
+        }
+
+        handler << "Running with:" << std::endl;
+        handler << "Steps=[" << steps << "]." << std::endl;
+        handler << "Steps size=[" << stepSize << "]." << std::endl;
+        handler << "Particles=[" << particles << "]." << std::endl;
+        handler << "Mode=[" << mode << "]." << std::endl;
+        handler << "MPI size=[" << commSize << "]." << std::endl;
+        handler << "OpenMP size=[" << ompSize << "]." << std::endl;
     }
     MPI_Bcast(&steps, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&stepSize, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -164,6 +184,12 @@ int main(int argc, char** argv)
     _mm_free(data.e_roof.z);
     _mm_free(data.leng_segment);
     MPI_Finalize();
+
+    if(0 == myRank)
+    {
+        handler << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
+	    handler.close();
+    }
     std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
 }

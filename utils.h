@@ -42,6 +42,16 @@ struct GlobalData
     double* leng_segment;
 };
 
+#ifndef __INTEL_COMPILER
+
+void* _mm_malloc(size_t size, size_t alignment);
+void _mm_free(void* pointer);
+
+#define nullptr NULL
+
+#endif
+
+
 void* allocateGeneric(const int size);
 double** allocateMatrixOfDoubles(const int x, const int y);
 double* allocateVectorOfDoubles(const int size);

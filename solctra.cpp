@@ -271,11 +271,11 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
                 break;
             }
         }
-        if (0 == i % onePercent)
-        {
-            actual_state = static_cast<double>(i * 100) * steps_inverse;
-            std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
-        }
+        //if (0 == i % onePercent)
+        //{
+        //    actual_state = static_cast<double>(i * 100) * steps_inverse;
+        //    std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
+        //}
     }
 }
 
