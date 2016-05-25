@@ -6,6 +6,10 @@
 #include "solctra.h"
 #include "FileHandler.h"
 #include <omp.h>
+#pragma offload_attribute(push, target(mic)
+#include <iostream>
+#pragma offload_attribute(pop)
+
 
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
@@ -190,7 +194,7 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
     return B;
 }
 
-void RK4(const GlobalData& data, const cartesian& start_point, const int steps, const double& step_size, const int path, const int mode)
+void RK4(const GlobalData& data, const cartesian& start_point, const int steps, const double& step_size, const int particle, const int mode)
 {
     cartesian p0;
     cartesian p1 = {0, 0, 0};
@@ -207,7 +211,7 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
     double r_radius;
     double actual_state;
 
-    FileHandler handler(path);
+    FileHandler handler(particle);
 
     handler.write(start_point.x, start_point.y, start_point.z);
 
@@ -277,25 +281,38 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
         if (0 == i % (onePercent * 10))
         {
             actual_state = static_cast<double>(i * 100) * steps_inverse;
-            std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
+            std::cout << "El porcentaje completado para particula=[" << particle << "] es=[" << std::fixed << actual_state << "]." << std::endl;
         }
     }
 }
 
-void runParticles(const GlobalData& data, const int particles, const int steps, const double& step_size, const int mode)
+void runParticles(const GlobalData& data, const int particles, const int steps, const double step_size, const int mode)
 {
     cartesian A={0,0,0};
-#pragma omp parallel for
+#pragma omp parallel for ordered schedule(dynamic, 4) private(A)
     for(int i=0; i < particles ; ++i)
     {
         //A.z=-0.02111;
         A.x=1.87451e-01+0.00474228/2*i;
         //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
-#pragma omp critical
+#pragma omp ordered
         {
             std::cout << "Working on particle=[" << i << "] with initial point=";
             A.print();
         }
-        RK4(data, A,steps,step_size,i, mode);
+        const int currentThread = omp_get_thread_num();
+#pragma offload target(mic:currentThread) \
+                    in(i) \
+                    in(step_size) \
+                    in(mode) \
+                    in(steps) \
+                    nocopy(data.coils.x) \
+                    nocopy(data.coils.y) \
+                    nocopy(data.coils.z) \
+                    nocopy(data.e_roof.x) \
+                    nocopy(data.e_roof.y) \
+                    nocopy(data.e_roof.z) \
+                    nocopy(data.leng_segment)
+        RK4(data, A, steps, step_size, i, mode);
     }
 }

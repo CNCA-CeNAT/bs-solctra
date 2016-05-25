@@ -4,7 +4,10 @@
 
 
 #include "utils.h"
-#include <sys/time.h>
+#include <sys/time.h>)
+#pragma offload_attribute(push, target(mic)
+#include <iostream>
+#pragma offload_attribute(pop
 
 #ifndef __INTEL_COMPILER
 
@@ -61,6 +64,47 @@ void deallocate(double* vector)
 {
     _mm_free(vector);
 }
+
+void freeGlobalDataInMic(const GlobalData& data)
+{
+//#ifdef __MIC__
+#pragma offload_transfer target(mic) in(data.coils.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
+                                     in(data.coils.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
+                                     in(data.coils.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
+                                     in(data.e_roof.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
+                                     in(data.e_roof.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
+                                     in(data.e_roof.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
+                                     in(data.leng_segment: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE)
+//#endif
+}
+
+void allocGlobaDataInMic(const GlobalData& data)
+{
+//#ifdef __MIC_
+    const int devices = _Offload_number_of_devices();
+    int flags[devices];
+    flags[0:devices] = 0;
+    for(int i = 0 ; i < devices ; ++i)
+    {
+#pragma offload_transfer target(mic:i) signal(&flags[i]) \
+                                     in(data.coils.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
+                                     in(data.coils.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
+                                     in(data.coils.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
+                                     in(data.e_roof.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
+                                     in(data.e_roof.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
+                                     in(data.e_roof.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
+                                     in(data.leng_segment: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC)
+    }
+    for(int i = 0 ; i < devices ; ++i)
+    {
+#pragma offload_wait target(mic:i) wait(&flags[i])
+    }
+//#endif
+}
+
+
+
+
 
 
 

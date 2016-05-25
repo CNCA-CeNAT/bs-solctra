@@ -5,6 +5,7 @@
 #ifndef SOLCTRA_FILEHANDLER_H
 #define SOLCTRA_FILEHANDLER_H
 
+#pragma offload_attribute(push, target(mic))
 #include <string>
 #include <fstream>
 
@@ -24,6 +25,7 @@ private:
 
     void open(bool overwrite);
 };
+#pragma offload_attribute(pop)
 
 
 #endif //SOLCTRA_FILEHANDLER_H

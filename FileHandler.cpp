@@ -3,7 +3,9 @@
 //
 
 #include "FileHandler.h"
+#pragma offload_attribute(push, target(mic)
 #include <iostream>
+#pragma offload_attribute(pop)
 
 FileHandler::FileHandler(const int id)
 {

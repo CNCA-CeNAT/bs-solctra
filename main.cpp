@@ -72,6 +72,10 @@ unsigned getModeFromArgs(const int& argc, char** argv)
 int main(int argc, char** argv)
 {
     const int ompSize = omp_get_max_threads();
+    int micOmpSize = 0;
+#pragma offload target(mic) out(micOmpSize)
+    micOmpSize = omp_get_max_threads();
+    const int devices = _Offload_number_of_devices();
     unsigned steps;
     double stepSize;
     unsigned precision;
@@ -88,7 +92,9 @@ int main(int argc, char** argv)
     std::cout << "Steps size=[" << stepSize << "]." << std::endl;
     std::cout << "Particles=[" << particles << "]." << std::endl;
     std::cout << "Mode=[" << mode << "]." << std::endl;
-    std::cout << "OpenMP size=[" << ompSize << "]." << std::endl;
+    std::cout << "OpenMP local size=[" << ompSize << "]." << std::endl;
+    std::cout << "OpenMP mic size=[" << micOmpSize << "]." << std::endl;
+    std::cout << "Number of devices=[" << devices << "]." << std::endl;
 
 
     cartesian A={0,0,0};          // A:start point of field line
@@ -117,6 +123,7 @@ int main(int argc, char** argv)
     e_roof(data);
 
     const double startTime = getCurrentTime();
+    allocGlobaDataInMic(data);
     if(particles > 1)
     {
         runParticles(data, particles, steps, stepSize, mode);
@@ -127,6 +134,7 @@ int main(int argc, char** argv)
         A.z=-0.0295;
         RK4(data, A, steps, stepSize, 5, mode);
     }
+    freeGlobalDataInMic(data);
     const double endTime = getCurrentTime();
     _mm_free(data.coils.x);
     _mm_free(data.coils.y);
