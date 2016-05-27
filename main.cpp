@@ -1,11 +1,12 @@
 
 #include "solctra.h"
+#include <iostream>
 #include <omp.h>
 
 const unsigned DEFAULT_STEPS = 500000;
 const double DEFAULT_STEP_SIZE = 0.001;
 const unsigned DEFAULT_PRECISION = 5;
-const unsigned DEFAULT_PARTICLES= 1;
+const unsigned DEFAULT_PARTICLES= 10;
 const unsigned DEFAULT_MODE= 1;
 
 unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
@@ -95,27 +96,20 @@ int main(int argc, char** argv)
     std::cout << "OpenMP local size=[" << ompSize << "]." << std::endl;
     std::cout << "OpenMP mic size=[" << micOmpSize << "]." << std::endl;
     std::cout << "Number of devices=[" << devices << "]." << std::endl;
-
-
     cartesian A={0,0,0};          // A:start point of field line
-    //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     const size_t sizeToAllocate = sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS;
     GlobalData data;
     data.coils.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.coils.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.coils.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     load_coil_data(data.coils.x, data.coils.y, data.coils.z, PATH_TO_RESOURCES);
-
-    //double eRoofX[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double eRoofY[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double eRoofZ[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double leng_segment[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //data.e_roof.x = eRoofX;
-    //data.e_roof.y = eRoofY;
-    //data.e_roof.z = eRoofZ;
-    //data.leng_segment = leng_segment;
+    /*for(unsigned i = 0 ; i < TOTAL_OF_COILS ; ++i)
+    {
+        std::cout << i << std::endl;
+        std::cout << coils[i]->x[359] << "\t" << coils[i]->y[359] << "\t" << coils[i]->z[359] << "\t" << std::endl;
+        std::cout << coils[i]->x[360] << "\t" << coils[i]->y[360] << "\t" << coils[i]->z[360] << "\t" << std::endl;
+        std::cout << coils[i]->x[361] << "\t" << coils[i]->y[361] << "\t" << coils[i]->z[361] << "\t" << std::endl;
+    }*/
     data.e_roof.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.e_roof.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.e_roof.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
@@ -123,18 +117,7 @@ int main(int argc, char** argv)
     e_roof(data);
 
     const double startTime = getCurrentTime();
-    allocGlobaDataInMic(data);
-    if(particles > 1)
-    {
-        runParticles(data, particles, steps, stepSize, mode);
-    }
-    else
-    {
-        A.x=2.284e-01;
-        A.z=-0.0295;
-        RK4(data, A, steps, stepSize, 5, mode);
-    }
-    freeGlobalDataInMic(data);
+    runParticles(data, particles, steps, stepSize, mode);
     const double endTime = getCurrentTime();
     _mm_free(data.coils.x);
     _mm_free(data.coils.y);
@@ -143,7 +126,6 @@ int main(int argc, char** argv)
     _mm_free(data.e_roof.y);
     _mm_free(data.e_roof.z);
     _mm_free(data.leng_segment);
-
     std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
 }

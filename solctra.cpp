@@ -4,12 +4,8 @@
 
 
 #include "solctra.h"
-#include "FileHandler.h"
 #include <omp.h>
-#pragma offload_attribute(push, target(mic)
-#include <iostream>
-#pragma offload_attribute(pop)
-
+#include <cstdio>
 
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
@@ -45,25 +41,22 @@ void load_coil_data(double* x, double* y, double* z, const std::string& path)
 
 void e_roof(GlobalData& data)
 {
-#pragma omp parallel
+#pragma omp parallel for num_threads(TOTAL_OF_COILS)
+    for (int j = 0; j < TOTAL_OF_COILS; j++)
     {
         cartesian segment;
-#pragma omp for
-        for (int j = 0; j < TOTAL_OF_COILS; j++)
-        {
-            const int base = j * TOTAL_OF_GRADES_PADDED;
+        const int base = j * TOTAL_OF_GRADES_PADDED;
 #pragma ivdep
-            for (int i = 0; i < TOTAL_OF_GRADES; i++)
-            {
-                segment.x = ( data.coils.x[base + i + 1] ) - ( data.coils.x[base + i] );
-                segment.y = ( data.coils.y[base + i + 1] ) - ( data.coils.y[base + i] );
-                segment.z = ( data.coils.z[base + i + 1] ) - ( data.coils.z[base + i] );
-                data.leng_segment[base + i] = norm_of(segment);
-                const double leng_segment_inverted = 1.0 / data.leng_segment[base + i];
-                data.e_roof.x[base + i] = segment.x * leng_segment_inverted;
-                data.e_roof.y[base + i] = segment.y * leng_segment_inverted;
-                data.e_roof.z[base + i] = segment.z * leng_segment_inverted;
-            }
+        for (int i = 0; i < TOTAL_OF_GRADES; i++)
+        {
+            segment.x = ( data.coils.x[base + i + 1] ) - ( data.coils.x[base + i] );
+            segment.y = ( data.coils.y[base + i + 1] ) - ( data.coils.y[base + i] );
+            segment.z = ( data.coils.z[base + i + 1] ) - ( data.coils.z[base + i] );
+            data.leng_segment[base + i] = norm_of(segment);
+            const double leng_segment_inverted = 1.0 / data.leng_segment[base + i];
+            data.e_roof.x[base + i] = segment.x * leng_segment_inverted;
+            data.e_roof.y[base + i] = segment.y * leng_segment_inverted;
+            data.e_roof.z[base + i] = segment.z * leng_segment_inverted;
         }
     }
 }
@@ -71,18 +64,19 @@ void e_roof(GlobalData& data)
 void R_vectors(double* x, double* y, double* z, const cartesian& point, Coil& Rmi, Coil& Rmf)
 {
 //#pragma nounroll
-//#pragma ivdep
+#pragma ivdep
 #pragma vector aligned
-#pragma omp simd
     for (int i = 0; i < TOTAL_OF_GRADES; i++)
     {
+    //printf("rmi.x %d\n", i);
+    //printf("rmi.x %f\n", x[i]);
+    //printf("rmi.x %f\n", point.x);
         Rmi.x[i] = point.x - x[i];
         Rmi.y[i] = point.y - y[i];
         Rmi.z[i] = point.z - z[i];
     }
 //#pragma nounroll
-//#pragma ivdep
-#pragma omp simd
+#pragma ivdep
 //This gives a segmentation fault
 //#pragma vector aligned
     for (int i = 0; i < TOTAL_OF_GRADES; i++)
@@ -95,9 +89,9 @@ void R_vectors(double* x, double* y, double* z, const cartesian& point, Coil& Rm
 
 cartesian magnetic_field(const GlobalData& data, const cartesian& point)
 {
-    const int threads = omp_get_max_threads();
+    const int threads = TOTAL_OF_COILS;
     cartesian* B_perIteration = new cartesian[threads];
-#pragma omp parallel
+#pragma omp parallel num_threads(TOTAL_OF_COILS)
     {
         const int myThread = omp_get_thread_num();
         //const int myThread = 0;
@@ -105,42 +99,28 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
         B_perIteration[myThread].y = 0;
         B_perIteration[myThread].z = 0;
         Coil Rmi, Rmf;
-        double rmiX[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmiY[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmiZ[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmfX[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmfY[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmfZ[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        Rmi.x = rmiX;
-        Rmi.y = rmiY;
-        Rmi.z = rmiZ;
-        Rmf.x = rmfX;
-        Rmf.y = rmfY;
-        Rmf.z = rmfZ;
-        //Rmi.x = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmi.y = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmi.z = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmf.x = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmf.y = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmf.z = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //std::cout << "before for" << std::endl;
+        Rmi.x = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmi.y = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmi.z = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmf.x = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmf.y = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmf.z = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        //printf("before for\n");
 #pragma omp for
         for (int i = 0; i < TOTAL_OF_COILS; i++)
         {
             cartesian B = {0, 0, 0};
             const int base = i * TOTAL_OF_GRADES_PADDED;
-            //std::cout << "before R_vectors" << std::endl;
+            //printf("before R_vectors\n");
             R_vectors(&data.coils.x[base], &data.coils.y[base], &data.coils.z[base], point, Rmi, Rmf);
-            //std::cout << "after R_vectors" << std::endl;
+            //printf("after R_vectors\n");
             const double multiplier = ( miu * I ) / ( 4 * PI );
 #pragma ivdep
 #pragma vector aligned
             for (int j = 0; j < TOTAL_OF_GRADES; j++)
             {
-                const double norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j] ) + ( Rmi.y[j] * Rmi.y[j] ) +
-                                              ( Rmi.z[j] * Rmi.z[j] )));
-                const double norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j] ) + ( Rmf.y[j] * Rmf.y[j] ) +
-                                              ( Rmf.z[j] * Rmf.z[j] )));
+                const double norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j]) + ( Rmi.y[j] * Rmi.y[j]) + ( Rmi.z[j] * Rmi.z[j])));
+                const double norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j]) + ( Rmf.y[j] * Rmf.y[j]) + ( Rmf.z[j] * Rmf.z[j])));
 
                 //firts vector of cross product in equation 8
                 cartesian U;
@@ -169,17 +149,16 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
             B_perIteration[myThread].y -= B.y;
             B_perIteration[myThread].z += B.z;
         }
-        //std::cout << "after for" << std::endl;
-        //_mm_free(Rmi.x);
-        //std::cout << "after free x" << std::endl;
-        //_mm_free(Rmi.y);
-        //_mm_free(Rmi.z);
-        //_mm_free(Rmf.x);
-        //_mm_free(Rmf.y);
-        //_mm_free(Rmf.z);
-        //std::cout << "after deletes" << std::endl;
+        //printf("after for\n");;
+        _mm_free(Rmi.x);
+        //printf("after free x\n");;
+        _mm_free(Rmi.y);
+        _mm_free(Rmi.z);
+        _mm_free(Rmf.x);
+        _mm_free(Rmf.y);
+        _mm_free(Rmf.z);
+        //printf("after deletes\n");;
     }
-    //std::cout << "after omp parallel." << std::endl;
     cartesian B = {0.0, 0.0, 0.0};
     for (int i = 0; i < threads; i++)
     {
@@ -187,10 +166,7 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
         B.y -= B_perIteration[i].y;
         B.z += B_perIteration[i].z;
     }
-    //std::cout << "after forfor." << std::endl;
     delete[] B_perIteration;
-    //std::cout << "after delete." << std::endl;
-    //B.print();
     return B;
 }
 
@@ -211,55 +187,60 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
     double r_radius;
     double actual_state;
 
-    FileHandler handler(particle);
-
-    handler.write(start_point.x, start_point.y, start_point.z);
+    FILE* handler;
+    char file_name[20];
+    sprintf(file_name,"results/path%03d.txt", particle);
+    handler = fopen(file_name, "w");
+    if(nullptr == handler)
+    {
+        printf("Unable to open file=[%s]. Nothing to do\n", file_name);
+        exit(0);
+    }
+    fprintf(handler, "%e\t%e\t%e\n", start_point.x, start_point.y, start_point.z);
 
     p0 = start_point;
     const double steps_inverse = static_cast<double>(1) / steps;
     const int onePercent = static_cast<int>(steps / 100);
-    const double half = 1.0 / 2.0;
 
     for (int i = 1; i < steps; i++)
     {
         K1 = magnetic_field(data, p0);
-        //std::cout << "After magnetic fields." << std::endl;
-        norm_temp = 1.0 / norm_of(K1);
-        K1.x = ( K1.x * norm_temp ) * step_size;
-        K1.y = ( K1.y * norm_temp ) * step_size;
-        K1.z = ( K1.z * norm_temp ) * step_size;
-        p1.x = ( K1.x * half ) + p0.x;
-        p1.y = ( K1.y * half ) + p0.y;
-        p1.z = ( K1.z * half ) + p0.z;
+        norm_temp = norm_of(K1);
+        K1.x = ( K1.x / norm_temp ) * step_size;
+        K1.y = ( K1.y / norm_temp ) * step_size;
+        K1.z = ( K1.z / norm_temp ) * step_size;
+        p1.x = ( K1.x / 2 ) + p0.x;
+        p1.y = ( K1.y / 2 ) + p0.y;
+        p1.z = ( K1.z / 2 ) + p0.z;
 
         K2 = magnetic_field(data, p1);
-        norm_temp = 1.0 / norm_of(K2);
-        K2.x = ( K2.x * norm_temp ) * step_size;
-        K2.y = ( K2.y * norm_temp ) * step_size;
-        K2.z = ( K2.z * norm_temp ) * step_size;
-        p2.x = ( K2.x * half ) + p0.x;
-        p2.y = ( K2.y * half ) + p0.y;
-        p2.z = ( K2.z * half ) + p0.z;
+        norm_temp = norm_of(K2);
+        K2.x = ( K2.x / norm_temp ) * step_size;
+        K2.y = ( K2.y / norm_temp ) * step_size;
+        K2.z = ( K2.z / norm_temp ) * step_size;
+        p2.x = ( K2.x / 2 ) + p0.x;
+        p2.y = ( K2.y / 2 ) + p0.y;
+        p2.z = ( K2.z / 2 ) + p0.z;
 
         K3 = magnetic_field(data, p2);
-        norm_temp = 1.0 / norm_of(K3);
-        K3.x = ( K3.x * norm_temp ) * step_size;
-        K3.y = ( K3.y * norm_temp ) * step_size;
-        K3.z = ( K3.z * norm_temp ) * step_size;
+        norm_temp = norm_of(K3);
+        K3.x = ( K3.x / norm_temp ) * step_size;
+        K3.y = ( K3.y / norm_temp ) * step_size;
+        K3.z = ( K3.z / norm_temp ) * step_size;
         p3.x = K3.x + p0.x;
         p3.y = K3.y + p0.y;
         p3.z = K3.z + p0.z;
 
         K4 = magnetic_field(data, p3);
-        norm_temp = 1.0 / norm_of(K4);
-        K4.x = ( K4.x * norm_temp ) * step_size;
-        K4.y = ( K4.y * norm_temp ) * step_size;
-        K4.z = ( K4.z * norm_temp ) * step_size;
+        norm_temp = norm_of(K4);
+        K4.x = ( K4.x / norm_temp ) * step_size;
+        K4.y = ( K4.y / norm_temp ) * step_size;
+        K4.z = ( K4.z / norm_temp ) * step_size;
         p0.x = p0.x + (( K1.x + 2 * K2.x + 2 * K3.x + K4.x ) / 6 );
         p0.y = p0.y + (( K1.y + 2 * K2.y + 2 * K3.y + K4.y ) / 6 );
         p0.z = p0.z + (( K1.z + 2 * K2.z + 2 * K3.z + K4.z ) / 6 );
 
-        handler.write(p0.x, p0.y, p0.z);
+        fprintf(handler, "%e\t%e\t%e\n", p0.x, p0.y, p0.z);
 
         if (mode == 1)
         {
@@ -274,45 +255,41 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
             r_radius = norm_of(r_vector);
             if (r_radius > 0.0944165)
             {
-                handler.write(r_radius, 000, 000);
+                fprintf(handler, "%e\t%e\t%e\n", r_radius, 0.0, 0.0);
                 break;
             }
         }
         if (0 == i % (onePercent * 10))
         {
             actual_state = static_cast<double>(i * 100) * steps_inverse;
-            std::cout << "El porcentaje completado para particula=[" << particle << "] es=[" << std::fixed << actual_state << "]." << std::endl;
+            printf("El porcentaje completado para particula=[%d] es=[%f].\n", particle, actual_state);
         }
     }
+    fclose(handler);
 }
-
 void runParticles(const GlobalData& data, const int particles, const int steps, const double step_size, const int mode)
 {
-    cartesian A={0,0,0};
-#pragma omp parallel for ordered schedule(dynamic, 4) private(A)
+//#pragma omp parallel for ordered schedule(dynamic, 4)
+#pragma omp parallel for
     for(int i=0; i < particles ; ++i)
     {
-        //A.z=-0.02111;
-        A.x=1.87451e-01+0.00474228/2*i;
-        //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
-#pragma omp ordered
-        {
-            std::cout << "Working on particle=[" << i << "] with initial point=";
-            A.print();
-        }
         const int currentThread = omp_get_thread_num();
-#pragma offload target(mic:currentThread) \
-                    in(i) \
-                    in(step_size) \
-                    in(mode) \
-                    in(steps) \
-                    nocopy(data.coils.x) \
-                    nocopy(data.coils.y) \
-                    nocopy(data.coils.z) \
-                    nocopy(data.e_roof.x) \
-                    nocopy(data.e_roof.y) \
-                    nocopy(data.e_roof.z) \
-                    nocopy(data.leng_segment)
+        cartesian A={0,0,0};
+        A.x=2.284e-01;
+        A.z=-0.0295;
+        {
+            printf("Thread=[%d] working on particle=[%d] with initial point=", currentThread, i);
+            A.print();
+            printf("\n");
+        }
+#pragma offload_transfer target(mic:currentThread) \
+                         in(data.coils.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS)) \
+                         in(data.coils.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS)) \
+                         in(data.coils.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS)) \
+                         in(data.e_roof.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS)) \
+                         in(data.e_roof.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS)) \
+                         in(data.e_roof.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS)) \
+                         in(data.leng_segment: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS))
         RK4(data, A, steps, step_size, i, mode);
     }
 }

@@ -18,16 +18,18 @@
 #define REUSE alloc_if(0) free_if(0)
 
 
+#pragma offload_attribute(push, target(mic))
+#include <cstdio>
+#pragma offload_attribute(pop)
 
 struct cartesian
 {
     double x, y, z;
     void print()
     {
-        std::cout << "X=[" << x << "]. Y=[" << y << "]. Z=[" << z << "]." << std::endl;
+        printf("X=[%e]. Y=[%e]. Z=[%e].\n", x, y, z);
     }
 };
-
 
 struct Coil
 {
@@ -54,15 +56,6 @@ void _mm_free(void* pointer);
 #define nullptr NULL
 
 #endif
-
-
-void* allocateGeneric(const int size);
-double** allocateMatrixOfDoubles(const int x, const int y);
-double* allocateVectorOfDoubles(const int size);
-void deallocateGeneric(void* pointer);
-void deallocate(double** matrix);
-void deallocate(double* vector);
-
 
 double getCurrentTime();
 
