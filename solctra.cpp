@@ -4,9 +4,9 @@
 
 
 #include "solctra.h"
-#include "FileHandler.h"
 #include <omp.h>
 #include <mpi.h>
+#include <cstdio>
 
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
@@ -98,42 +98,28 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
         B_perIteration[myThread].y = 0;
         B_perIteration[myThread].z = 0;
         Coil Rmi, Rmf;
-        double rmiX[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmiY[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmiZ[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmfX[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmfY[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        double rmfZ[TOTAL_OF_GRADES + 1] __attribute__((aligned(64)));
-        Rmi.x = rmiX;
-        Rmi.y = rmiY;
-        Rmi.z = rmiZ;
-        Rmf.x = rmfX;
-        Rmf.y = rmfY;
-        Rmf.z = rmfZ;
-        //Rmi.x = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmi.y = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmi.z = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmf.x = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmf.y = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //Rmf.z = static_cast<double*>(_mm_malloc(TOTAL_OF_GRADES + 1, ALIGNMENT_SIZE));
-        //std::cout << "before for" << std::endl;
+        Rmi.x = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmi.y = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmi.z = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmf.x = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmf.y = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        Rmf.z = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
+        printf("before for\n");
 #pragma omp for
         for (int i = 0; i < TOTAL_OF_COILS; i++)
         {
             cartesian B = {0, 0, 0};
             const int base = i * TOTAL_OF_GRADES_PADDED;
-            //std::cout << "before R_vectors" << std::endl;
+            //printf("before R_vectors\n");
             R_vectors(&data.coils.x[base], &data.coils.y[base], &data.coils.z[base], point, Rmi, Rmf);
-            //std::cout << "after R_vectors" << std::endl;
+            //printf("after R_vectors\n");
             const double multiplier = ( miu * I ) / ( 4 * PI );
 #pragma ivdep
 #pragma vector aligned
             for (int j = 0; j < TOTAL_OF_GRADES; j++)
             {
-                const double norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j] ) + ( Rmi.y[j] * Rmi.y[j] ) +
-                                              ( Rmi.z[j] * Rmi.z[j] )));
-                const double norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j] ) + ( Rmf.y[j] * Rmf.y[j] ) +
-                                              ( Rmf.z[j] * Rmf.z[j] )));
+                const double norm_Rmi = sqrt((( Rmi.x[j] * Rmi.x[j]) + ( Rmi.y[j] * Rmi.y[j]) + ( Rmi.z[j] * Rmi.z[j])));
+                const double norm_Rmf = sqrt((( Rmf.x[j] * Rmf.x[j]) + ( Rmf.y[j] * Rmf.y[j]) + ( Rmf.z[j] * Rmf.z[j])));
 
                 //firts vector of cross product in equation 8
                 cartesian U;
@@ -162,15 +148,15 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
             B_perIteration[myThread].y -= B.y;
             B_perIteration[myThread].z += B.z;
         }
-        //std::cout << "after for" << std::endl;
-        //_mm_free(Rmi.x);
-        //std::cout << "after free x" << std::endl;
-        //_mm_free(Rmi.y);
-        //_mm_free(Rmi.z);
-        //_mm_free(Rmf.x);
-        //_mm_free(Rmf.y);
-        //_mm_free(Rmf.z);
-        //std::cout << "after deletes" << std::endl;
+        //printf("after for\n");;
+        _mm_free(Rmi.x);
+        //printf("after free x\n");;
+        _mm_free(Rmi.y);
+        _mm_free(Rmi.z);
+        _mm_free(Rmf.x);
+        _mm_free(Rmf.y);
+        _mm_free(Rmf.z);
+        //printf("after deletes\n");;
     }
     //std::cout << "after omp parallel." << std::endl;
     cartesian B = {0.0, 0.0, 0.0};
@@ -187,8 +173,9 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
     return B;
 }
 
-void RK4(const GlobalData& data, const cartesian& start_point, const int steps, const double& step_size, const int path, const int mode)
+void RK4(const GlobalData& data, const cartesian& start_point, const int steps, const double& step_size, const int particle, const int mode)
 {
+    //printf("RK4 begins...\n");
     cartesian p0;
     cartesian p1 = {0, 0, 0};
     cartesian p2 = {0, 0, 0};
@@ -202,21 +189,28 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
     cartesian r_vector;
     double norm_temp;
     double r_radius;
-    double actual_state;
+    //double actual_state;
 
-    FileHandler handler(path);
-
-    handler.write(start_point.x, start_point.y, start_point.z);
+    FILE* handler;
+    char file_name[20];
+    sprintf(file_name,"results/path%03d.txt", particle);
+    handler = fopen(file_name, "w");
+    if(nullptr == handler)
+    {
+        printf("Unable to open file=[%s]. Nothing to do\n", file_name);
+        exit(0);
+    }
+    fprintf(handler, "%e\t%e\t%e\n", start_point.x, start_point.y, start_point.z);
 
     p0 = start_point;
-    const double steps_inverse = static_cast<double>(1) / steps;
-    const int onePercent = static_cast<int>(steps / 100);
+    //const double steps_inverse = static_cast<double>(1) / steps;
+    //const int onePercent = static_cast<int>(steps / 100);
     const double half = 1.0 / 2.0;
 
     for (int i = 1; i < steps; i++)
     {
         K1 = magnetic_field(data, p0);
-        //std::cout << "After magnetic fields." << std::endl;
+        //printf("After magnetic fields.\n");
         norm_temp = 1.0 / norm_of(K1);
         K1.x = ( K1.x * norm_temp ) * step_size;
         K1.y = ( K1.y * norm_temp ) * step_size;
@@ -252,7 +246,7 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
         p0.y = p0.y + (( K1.y + 2 * K2.y + 2 * K3.y + K4.y ) / 6 );
         p0.z = p0.z + (( K1.z + 2 * K2.z + 2 * K3.z + K4.z ) / 6 );
 
-        handler.write(p0.x, p0.y, p0.z);
+        fprintf(handler, "%e\t%e\t%e\n", p0.x, p0.y, p0.z);
 
         if (mode == 1)
         {
@@ -267,16 +261,17 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
             r_radius = norm_of(r_vector);
             if (r_radius > 0.0944165)
             {
-                handler.write(r_radius, 000, 000);
+                fprintf(handler, "%e\t%e\t%e\n", r_radius, 0.0, 0.0);
                 break;
             }
         }
-        //if (0 == i % onePercent)
+        //if (0 == i % (onePercent * 10))
         //{
         //    actual_state = static_cast<double>(i * 100) * steps_inverse;
-        //    std::cout << "El porcentaje completado es=[" << std::fixed << actual_state << "]." << std::endl;
+        //    printf("El porcentaje completado para particula=[%d] es=[%f].\n", particle, actual_state);
         //}
     }
+    fclose(handler);
 }
 
 void runParticles(const GlobalData& data, const int particles, const int steps, const double& step_size, const int mode)
@@ -290,8 +285,10 @@ void runParticles(const GlobalData& data, const int particles, const int steps, 
     {
         if(i % commSize == myRank)
         {
+            A.x=2.284e-01;
+            A.z=-0.0295;
             //A.z=-0.02111;
-            A.x=1.87451e-01+0.00474228/2*i;
+            //A.x=1.87451e-01+0.00474228/2*i;
             //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
             std::cout << "Rank=[" << myRank << "] working on particle=[" << i << "] with initial point=";
             A.print();

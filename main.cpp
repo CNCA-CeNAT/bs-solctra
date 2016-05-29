@@ -123,7 +123,6 @@ int main(int argc, char** argv)
     MPI_Bcast(&mode, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
 
-    cartesian A={0,0,0};          // A:start point of field line
     //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
@@ -163,16 +162,7 @@ int main(int argc, char** argv)
     MPI_Bcast(data.leng_segment, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     const double startTime = getCurrentTime();
-    if(particles > 1)
-    {
-        runParticles(data, particles, steps, stepSize, mode);
-    }
-    else if(0 == myRank)
-    {
-        A.x=2.284e-01;
-        A.z=-0.0295;
-        RK4(data, A, steps, stepSize, 5, mode);
-    }
+    runParticles(data, particles, steps, stepSize, mode);
     std::cout << "Rank=" << myRank << " before finalize barrier!" << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     const double endTime = getCurrentTime();

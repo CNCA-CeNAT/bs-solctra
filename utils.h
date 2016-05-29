@@ -5,8 +5,6 @@
 #ifndef SOLCTRA_UTILS_H
 #define SOLCTRA_UTILS_H
 
-#include <string>
-#include <iostream>
 
 #define     PI      3.141592654
 #define     miu     1.2566e-06
@@ -18,15 +16,15 @@
 #define PATH_TO_RESOURCES "resources"
 
 
+#include <cstdio>
 struct cartesian
 {
     double x, y, z;
     void print()
     {
-        std::cout << "X=[" << x << "]. Y=[" << y << "]. Z=[" << z << "]." << std::endl;
+        printf("X=[%e]. Y=[%e]. Z=[%e].\n", x, y, z);
     }
 };
-
 
 struct Coil
 {
@@ -50,15 +48,6 @@ void _mm_free(void* pointer);
 #define nullptr NULL
 
 #endif
-
-
-void* allocateGeneric(const int size);
-double** allocateMatrixOfDoubles(const int x, const int y);
-double* allocateVectorOfDoubles(const int size);
-void deallocateGeneric(void* pointer);
-void deallocate(double** matrix);
-void deallocate(double* vector);
-
 
 double getCurrentTime();
 

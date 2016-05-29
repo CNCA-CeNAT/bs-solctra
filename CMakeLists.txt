@@ -13,5 +13,5 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -DPRINT_FOR_DEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "/media/lchavarr/3635-3935/Dropbox/TEC/Tesis/code sources/solctra")
-set(SOURCE_FILES main.cpp solctra.cpp solctra.h utils.h utils.cpp FileHandler.h FileHandler.cpp)
+set(SOURCE_FILES main.cpp solctra.cpp solctra.h utils.h utils.cpp)
 add_executable(solctra ${SOURCE_FILES})
