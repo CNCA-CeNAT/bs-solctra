@@ -3,12 +3,16 @@
 #include <mpi.h>
 #include <omp.h>
 #include <fstream>
+#include <iostream>
+#include <cstring>
 
+const unsigned DEFAULT_STRING_BUFFER = 30;
 const unsigned DEFAULT_STEPS = 500000;
 const double DEFAULT_STEP_SIZE = 0.001;
 const unsigned DEFAULT_PRECISION = 5;
 const unsigned DEFAULT_PARTICLES= 1;
 const unsigned DEFAULT_MODE= 1;
+const char* DEFAULT_OUTPUT = "results";
 
 unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
 {
@@ -71,6 +75,24 @@ unsigned getModeFromArgs(const int& argc, char** argv)
     return DEFAULT_MODE;
 }
 
+void getResultsPath(const int& argc, char** argv, char* &path)
+{
+    bool found = false;
+    for(int i = 1 ; i < argc - 1 ; ++i)
+    {
+        std::string tmp = argv[i];
+        if(tmp == "-out")
+        {
+            found = true;
+            sprintf(path,"results_%s", argv[i+1]);
+        }
+    }
+    if(!found)
+    {
+        strcpy(path, "results");
+    }
+}
+
 int main(int argc, char** argv)
 {
     MPI_Init(&argc, &argv);
@@ -84,6 +106,7 @@ int main(int argc, char** argv)
     unsigned precision;
     unsigned int particles;
     unsigned int mode;
+    char* output = new char[DEFAULT_STRING_BUFFER];
     std::ofstream handler;
     if(0 == myRank)
     {
@@ -93,15 +116,20 @@ int main(int argc, char** argv)
         precision = getPrintPrecisionFromArgs(argc, argv);
         particles = getParticlesFromArgs(argc, argv);
         mode = getModeFromArgs(argc, argv);
+        getResultsPath(argc, argv, output);
+        createDirectoryIfNotExists(output);
         std::cout.precision(precision);
         std::cout << "Running with:" << std::endl;
         std::cout << "Steps=[" << steps << "]." << std::endl;
         std::cout << "Steps size=[" << stepSize << "]." << std::endl;
         std::cout << "Particles=[" << particles << "]." << std::endl;
         std::cout << "Mode=[" << mode << "]." << std::endl;
+        std::cout << "Output path=[" << output << "]." << std::endl;
         std::cout << "MPI size=[" << commSize << "]." << std::endl;
         std::cout << "OpenMP size=[" << ompSize << "]." << std::endl;
-        handler.open("stdout.log");
+        char file_name[30];
+        sprintf(file_name,"%s/stdout.log", output);
+        handler.open(file_name);
         if(!handler.is_open())
         {
             std::cerr << "Unable to open stdout.log for appending. Nothing to do." << std::endl;
@@ -113,6 +141,7 @@ int main(int argc, char** argv)
         handler << "Steps size=[" << stepSize << "]." << std::endl;
         handler << "Particles=[" << particles << "]." << std::endl;
         handler << "Mode=[" << mode << "]." << std::endl;
+        handler << "Output path=[" << output << "]." << std::endl;
         handler << "MPI size=[" << commSize << "]." << std::endl;
         handler << "OpenMP size=[" << ompSize << "]." << std::endl;
     }
@@ -121,6 +150,15 @@ int main(int argc, char** argv)
     MPI_Bcast(&precision, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&particles, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&mode, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Bcast(output, DEFAULT_STRING_BUFFER, MPI_CHAR, 0, MPI_COMM_WORLD);
+    std::cout << "Rank=[" << myRank << "] => Running with:" << std::endl;
+    std::cout << "Rank=[" << myRank << "] => Steps=[" << steps << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => Steps size=[" << stepSize << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => Particles=[" << particles << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => Mode=[" << mode << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => Output path=[" << output << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => MPI size=[" << commSize << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => OpenMP size=[" << ompSize << "]." << std::endl;
 
 
     //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
@@ -162,7 +200,7 @@ int main(int argc, char** argv)
     MPI_Bcast(data.leng_segment, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     const double startTime = getCurrentTime();
-    runParticles(data, particles, steps, stepSize, mode);
+    runParticles(data, output, particles, steps, stepSize, mode);
     std::cout << "Rank=" << myRank << " before finalize barrier!" << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     const double endTime = getCurrentTime();

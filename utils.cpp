@@ -4,7 +4,9 @@
 
 
 #include "utils.h"
+#include <cstdlib>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #ifndef __INTEL_COMPILER
 #include <cstdlib>
@@ -25,4 +27,34 @@ double getCurrentTime()
     struct timeval tod;
     gettimeofday(&tod, nullptr);
     return static_cast<double>(tod.tv_sec) + static_cast<double>(tod.tv_usec) * 1.0e-6;
+}
+
+void createDirectoryIfNotExists(const char* path)
+{
+    if(!directoryExists(path))
+    {
+        const int error = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        if (0 > error)
+        {
+            printf("Error creating directory!n");
+            exit(1);
+        }
+    }
+}
+
+bool directoryExists(const char* path)
+{
+    struct stat info;
+    if (stat(path, &info) != 0)
+    {
+        return false;
+    }
+    else if (info.st_mode & S_IFDIR)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }

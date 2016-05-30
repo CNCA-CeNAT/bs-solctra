@@ -1,0 +1,10 @@
+#PBS -N solctra
+#PBS -q n4h24
+#PBS -l nodes=4
+#PBS -l walltime=12:00:00
+#PBS -d /home/ldcl289/solctra
+
+export OMP_NUM_THREADS=4
+cd ~/solctra
+
+/usr/lib64/openmpi/bin/mpiexec -n 16 ./solctra -particles 16 -out $PBS_JOBID

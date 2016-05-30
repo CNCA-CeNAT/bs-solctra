@@ -50,5 +50,7 @@ void _mm_free(void* pointer);
 #endif
 
 double getCurrentTime();
+void createDirectoryIfNotExists(const char* path);
+bool directoryExists(const char* path);
 
 #endif //SOLCTRA_UTILS_H

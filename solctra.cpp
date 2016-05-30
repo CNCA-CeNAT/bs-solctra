@@ -104,7 +104,7 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
         Rmf.x = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
         Rmf.y = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
         Rmf.z = static_cast<double*>(_mm_malloc(sizeof(double) * (TOTAL_OF_GRADES + 1), ALIGNMENT_SIZE));
-        printf("before for\n");
+        //printf("before for\n");
 #pragma omp for
         for (int i = 0; i < TOTAL_OF_COILS; i++)
         {
@@ -173,7 +173,7 @@ cartesian magnetic_field(const GlobalData& data, const cartesian& point)
     return B;
 }
 
-void RK4(const GlobalData& data, const cartesian& start_point, const int steps, const double& step_size, const int particle, const int mode)
+void RK4(const GlobalData& data, const char* output, const cartesian& start_point, const int steps, const double& step_size, const int particle, const int mode)
 {
     //printf("RK4 begins...\n");
     cartesian p0;
@@ -191,9 +191,16 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
     double r_radius;
     //double actual_state;
 
+    int myRank;
+    int commSize;
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
     FILE* handler;
-    char file_name[20];
-    sprintf(file_name,"results/path%03d.txt", particle);
+    char file_name[30];
+    printf("Rank=[%d] working before file definition.\n", myRank);
+    sprintf(file_name,"%s/path%03d.txt", output, particle);
+    printf("Rank=[%d] working on file=[%s].\n", myRank, file_name);
     handler = fopen(file_name, "w");
     if(nullptr == handler)
     {
@@ -274,7 +281,7 @@ void RK4(const GlobalData& data, const cartesian& start_point, const int steps, 
     fclose(handler);
 }
 
-void runParticles(const GlobalData& data, const int particles, const int steps, const double& step_size, const int mode)
+void runParticles(const GlobalData& data, const char* output, const int particles, const int steps, const double& step_size, const int mode)
 {
     int myRank;
     int commSize;
@@ -290,9 +297,9 @@ void runParticles(const GlobalData& data, const int particles, const int steps, 
             //A.z=-0.02111;
             //A.x=1.87451e-01+0.00474228/2*i;
             //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
-            std::cout << "Rank=[" << myRank << "] working on particle=[" << i << "] with initial point=";
+            printf("Rank=[%d] working on particle=[%d] with initial point=", myRank, i);
             A.print();
-            RK4(data, A,steps,step_size,i, mode);
+            RK4(data, output, A,steps,step_size,i, mode);
         }
     }
 }
