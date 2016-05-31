@@ -75,7 +75,7 @@ unsigned getModeFromArgs(const int& argc, char** argv)
     return DEFAULT_MODE;
 }
 
-void getResultsPath(const int& argc, char** argv, char* &path)
+void getResultsPath(const int& argc, char** argv, char* key, char* &path)
 {
     bool found = false;
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -85,11 +85,13 @@ void getResultsPath(const int& argc, char** argv, char* &path)
         {
             found = true;
             sprintf(path,"results_%s", argv[i+1]);
+            strcpy(key, argv[i+1]);
         }
     }
     if(!found)
     {
         strcpy(path, "results");
+        strcpy(key, "");
     }
 }
 
@@ -116,7 +118,8 @@ int main(int argc, char** argv)
         precision = getPrintPrecisionFromArgs(argc, argv);
         particles = getParticlesFromArgs(argc, argv);
         mode = getModeFromArgs(argc, argv);
-        getResultsPath(argc, argv, output);
+        char file_name[30];
+        getResultsPath(argc, argv, file_name, output);
         createDirectoryIfNotExists(output);
         std::cout.precision(precision);
         std::cout << "Running with:" << std::endl;
@@ -127,8 +130,7 @@ int main(int argc, char** argv)
         std::cout << "Output path=[" << output << "]." << std::endl;
         std::cout << "MPI size=[" << commSize << "]." << std::endl;
         std::cout << "OpenMP size=[" << ompSize << "]." << std::endl;
-        char file_name[30];
-        sprintf(file_name,"%s/stdout.log", output);
+        sprintf(file_name,"stdout_%s.log", file_name);
         handler.open(file_name);
         if(!handler.is_open())
         {
@@ -216,7 +218,7 @@ int main(int argc, char** argv)
     if(0 == myRank)
     {
         handler << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
-	    handler.close();
+	handler.close();
     }
     std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     return (5);
