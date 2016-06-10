@@ -49,6 +49,7 @@ void _mm_free(void* pointer);
 
 #endif
 
+void loadFile(double* x, double* y, double* z, const int length, const char* path);
 double getCurrentTime();
 void createDirectoryIfNotExists(const char* path);
 bool directoryExists(const char* path);

@@ -18,6 +18,6 @@ inline double norm_of(const cartesian& vec)
 {
     return sqrt(( vec.x * vec.x ) + ( vec.y * vec.y ) + ( vec.z * vec.z ));
 }
-void runParticles(const GlobalData& data, const char* output, const int particles, const int steps, const double& step_size, const int mode);
+void runParticles(const GlobalData& data, const char* output, const Coil& particles, const int length, const int steps, const double& step_size, const int mode);
 
 #endif //SOLCTRA_SOLCTRA_H

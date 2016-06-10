@@ -21,6 +21,30 @@ void _mm_free(void* pointer)
 }
 #endif
 
+void loadFile(double* x, double* y, double* z, const int length, const char* path)
+{
+    FILE* file_buff;
+    //Open file
+    file_buff = fopen(path, "r");
+    if (file_buff == nullptr)
+    {
+        printf("Error al abrir archivo \n");
+    }
+    else
+    {
+        double localX, localY, localZ;
+        printf("Loading %s with length=%d\n", path, length);
+        for (int point = 0; point < length; point++)
+        {
+            fscanf(file_buff, "%le %le %le", &localX, &localY, &localZ);
+            x[point] = localX;
+            y[point] = localY;
+            z[point] = localZ;
+        }
+        fclose(file_buff);
+    }
+
+}
 
 double getCurrentTime()
 {

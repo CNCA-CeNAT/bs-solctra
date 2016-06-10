@@ -10,33 +10,13 @@
 
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
-    char coil_file[30];
-    int num, point;
-    double localX, localY, localZ;
-    for (num = 0; num < TOTAL_OF_COILS; num++)
+    for (int num = 0; num < TOTAL_OF_COILS; num++)
     {
+        char coil_file[30];
         std::string tmp = path + "/Bobina%dm.txt";
         //Set Coil files location
         sprintf(coil_file, tmp.c_str(), num);
-        //create buffer
-        FILE* file_buff;
-        //Open file
-        file_buff = fopen(coil_file, "r");
-        if (file_buff == nullptr)
-        {
-            printf("Error al abrir archivo \n");
-        }
-        else
-        {
-            for (point = 0; point < TOTAL_OF_GRADES + 1; point++)
-            {
-                fscanf(file_buff, "%le %le %le", &localX, &localY, &localZ);
-                x[num * TOTAL_OF_GRADES_PADDED + point] = localX;
-                y[num * TOTAL_OF_GRADES_PADDED + point] = localY;
-                z[num * TOTAL_OF_GRADES_PADDED + point] = localZ;
-            }
-            fclose(file_buff);
-        }
+        loadFile(&(x[num * TOTAL_OF_GRADES_PADDED]), &(y[num * TOTAL_OF_GRADES_PADDED]), &(z[num * TOTAL_OF_GRADES_PADDED]), TOTAL_OF_GRADES + 1, coil_file);
     }
 }
 
@@ -281,19 +261,20 @@ void RK4(const GlobalData& data, const char* output, const cartesian& start_poin
     fclose(handler);
 }
 
-void runParticles(const GlobalData& data, const char* output, const int particles, const int steps, const double& step_size, const int mode)
+void runParticles(const GlobalData& data, const char* output, const Coil& particles, const int length, const int steps, const double& step_size, const int mode)
 {
     int myRank;
     int commSize;
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     cartesian A={0,0,0};
-    for(int i=0; i < particles ; ++i)
+    for(int i=0; i < length ; ++i)
     {
         if(i % commSize == myRank)
         {
-            A.x=2.284e-01;
-            A.z=-0.0295;
+            A.x = particles.x[i];
+            A.y = particles.y[i];
+            A.z = particles.z[i];
             //A.z=-0.02111;
             //A.x=1.87451e-01+0.00474228/2*i;
             //A.x=1.87451e-01+0.00474228/2*i;//0.19775;//+0.00474228/2*i;A.x=1.87451e-01+0.00474228/2*i;
