@@ -1,10 +1,13 @@
 #PBS -N solctra
 #PBS -q n4h24
 #PBS -l nodes=4:ppn=8
-#PBS -l walltime=24:00:00
+#PBS -l walltime=06:00:00
 #PBS -d /home/ldcl289/solctra
 
 export OMP_NUM_THREADS=2
+export KMP_SETTINGS=TRUE
 cd ~/solctra
 
-/usr/lib64/openmpi/bin/mpiexec -n 16 ./solctra -particles 128 -id $PBS_JOBID
+#/usr/lib64/openmpi/bin/mpiexec -n 16 --map-by core:PE=2 ./solctra -length 16 -particles particles.txt -id $PBS_JOBID
+#/usr/lib64/openmpi/bin/mpiexec -n 16 -bynode -bind-to-core -display-devel-allocation -display-devel-map --cpus-per-proc 2 ./solctra -length 16 -particles particles.txt -id $PBS_JOBID
+/usr/lib64/openmpi/bin/mpiexec -n 16 -display-devel-allocation -display-devel-map -bind-to-core  ./solctra -length 16 -particles particles.txt -id $PBS_JOBID

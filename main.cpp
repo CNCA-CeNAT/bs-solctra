@@ -133,6 +133,9 @@ int main(int argc, char** argv)
     char* output = new char[DEFAULT_STRING_BUFFER];
     char* jobId = new char[DEFAULT_STRING_BUFFER];
     std::ofstream handler;
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
     if(0 == myRank)
     {
         std::cout << "Communicator Size=[" << commSize << "]." << std::endl;
@@ -171,6 +174,7 @@ int main(int argc, char** argv)
         handler << "Output path=[" << output << "]." << std::endl;
         handler << "MPI size=[" << commSize << "]." << std::endl;
         handler << "OpenMP size=[" << ompSize << "]." << std::endl;
+        handler << "Rank=[" << myRank << "] => Processor Name=[" << processor_name << "]." << std::endl;
     }
     MPI_Bcast(&steps, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&stepSize, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -199,6 +203,7 @@ int main(int argc, char** argv)
     std::cout << "Rank=[" << myRank << "] => Output path=[" << output << "]." << std::endl;
     std::cout << "Rank=[" << myRank << "] => MPI size=[" << commSize << "]." << std::endl;
     std::cout << "Rank=[" << myRank << "] => OpenMP size=[" << ompSize << "]." << std::endl;
+    std::cout << "Rank=[" << myRank << "] => Processor Name=[" << processor_name << "]." << std::endl;
 
     //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
@@ -240,9 +245,10 @@ int main(int argc, char** argv)
 
     const double startTime = getCurrentTime();
     runParticles(data, output, particles, length, steps, stepSize, mode);
-    std::cout << "Rank=" << myRank << " before finalize barrier!" << std::endl;
-    MPI_Barrier(MPI_COMM_WORLD);
     const double endTime = getCurrentTime();
+    std::cout << "Rank=" << myRank << " before finalize barrier on processor=[" << processor_name << "] with time=[" << (endTime - startTime) << "]!" << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    //endTime = getCurrentTime();
     _mm_free(data.coils.x);
     _mm_free(data.coils.y);
     _mm_free(data.coils.z);
@@ -264,7 +270,7 @@ int main(int argc, char** argv)
             std::cerr << "Unable to open stats.csv for appending. Nothing to do." << std::endl;
             exit(0);
         }
-        handler << jobId << "," << commSize << "," << ompSize << "," << length << "," << steps << "," <<  stepSize << "," << output << "," << (endTime - startTime) << std::endl;
+        handler << jobId << "," << commSize << "," << ompSize << "," << length << "," << steps << "," <<  stepSize << "," << output << "," << (endTime - startTime) << "," << processor_name << std::endl;
         handler.close();
     }
     delete[] jobId;
