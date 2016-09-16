@@ -10,6 +10,7 @@
 #define     miu     1.2566e-06
 #define     I       -4350
 #define ALIGNMENT_SIZE 64
+#define GRADES_PER_PAGE ALIGNMENT_SIZE / sizeof(double)
 #define TOTAL_OF_GRADES 360
 #define TOTAL_OF_GRADES_PADDED 384
 #define TOTAL_OF_COILS 12
