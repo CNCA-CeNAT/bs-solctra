@@ -161,13 +161,13 @@ Begin optimization report for: runParticles(const GlobalData &, const char *, co
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at solctra.cpp(308,5)
-   remark #15382: vectorization support: call to function printf(const char *, ...) cannot be vectorized   [ solctra.cpp(318,13) ]
+LOOP BEGIN at solctra.cpp(328,5)
+   remark #15382: vectorization support: call to function printf(const char *, ...) cannot be vectorized   [ solctra.cpp(338,13) ]
    remark #15382: vectorization support: call to function printf(const char *, ...) cannot be vectorized   [ utils.h(26,9) ]
-   remark #15382: vectorization support: call to function RK4(const GlobalData &, const char *, const cartesian &, int, const double &, int, int) cannot be vectorized   [ solctra.cpp(320,13) ]
+   remark #15382: vectorization support: call to function RK4(const GlobalData &, const char *, const cartesian &, int, const double &, int, int) cannot be vectorized   [ solctra.cpp(340,13) ]
    remark #15344: loop was not vectorized: vector dependence prevents vectorization
-   remark #15346: vector dependence: assumed ANTI dependence between myRank (310:9) and call:RK4(const GlobalData &, const char *, const cartesian &, in (320:13)
-   remark #15346: vector dependence: assumed FLOW dependence between call:RK4(const GlobalData &, const char *, const cartesian &, in (320:13) and myRank (310:9)
+   remark #15346: vector dependence: assumed ANTI dependence between myRank (330:9) and call:RK4(const GlobalData &, const char *, const cartesian &, in (340:13)
+   remark #15346: vector dependence: assumed FLOW dependence between call:RK4(const GlobalData &, const char *, const cartesian &, in (340:13) and myRank (330:9)
 LOOP END
 ===========================================================================
 
@@ -176,12 +176,12 @@ Begin optimization report for: RK4(const GlobalData &, const char *, const carte
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at solctra.cpp(13,5) inlined into solctra.cpp(194,5)
+LOOP BEGIN at solctra.cpp(13,5) inlined into solctra.cpp(214,5)
    remark #15527: loop was not vectorized: function call to _mm_malloc(unsigned long long, unsigned long long) cannot be vectorized   [ solctra.cpp(15,41) ]
 LOOP END
 
-LOOP BEGIN at solctra.cpp(234,5)
-   remark #15520: loop was not vectorized: loop with multiple exits cannot be vectorized unless it meets search loop idiom criteria   [ solctra.cpp(288,17) ]
+LOOP BEGIN at solctra.cpp(254,5)
+   remark #15520: loop was not vectorized: loop with multiple exits cannot be vectorized unless it meets search loop idiom criteria   [ solctra.cpp(308,17) ]
 LOOP END
 ===========================================================================
 
@@ -194,24 +194,24 @@ solctra.cpp(109:1-109:1):OMP:_Z14magnetic_fieldP4CoilS0_RK10GlobalDataRK9cartesi
     Report from: Vector optimizations [vec]
 
 
-LOOP BEGIN at solctra.cpp(176,5)
-   remark #15331: loop was not vectorized: precise FP model implied by the command line or a directive prevents vectorization. Consider using fast FP model   [ solctra.cpp(178,9) ]
+LOOP BEGIN at solctra.cpp(196,5)
+   remark #15331: loop was not vectorized: precise FP model implied by the command line or a directive prevents vectorization. Consider using fast FP model   [ solctra.cpp(198,9) ]
 LOOP END
 
-LOOP BEGIN at solctra.cpp(176,5)
+LOOP BEGIN at solctra.cpp(196,5)
 <Remainder>
 LOOP END
 
-LOOP BEGIN at solctra.cpp(74,5) inlined into solctra.cpp(112,9)
+LOOP BEGIN at solctra.cpp(128,9)
    remark #15542: loop was not vectorized: inner loop was already vectorized
 
-   LOOP BEGIN at solctra.cpp(84,20) inlined into solctra.cpp(112,9)
-      remark #15388: vectorization support: reference ((Rmi+i*24)->x)[j] has aligned access   [ solctra.cpp(86,13) ]
-      remark #15388: vectorization support: reference x[j] has aligned access   [ solctra.cpp(86,37) ]
-      remark #15388: vectorization support: reference ((Rmi+i*24)->y)[j] has aligned access   [ solctra.cpp(87,13) ]
-      remark #15388: vectorization support: reference y[j] has aligned access   [ solctra.cpp(87,37) ]
-      remark #15388: vectorization support: reference ((Rmi+i*24)->z)[j] has aligned access   [ solctra.cpp(88,13) ]
-      remark #15388: vectorization support: reference z[j] has aligned access   [ solctra.cpp(88,37) ]
+   LOOP BEGIN at solctra.cpp(139,17)
+      remark #15388: vectorization support: reference ((rmi+i*24)->x)[j] has aligned access   [ solctra.cpp(141,21) ]
+      remark #15388: vectorization support: reference x[j] has aligned access   [ solctra.cpp(141,45) ]
+      remark #15388: vectorization support: reference ((rmi+i*24)->y)[j] has aligned access   [ solctra.cpp(142,21) ]
+      remark #15388: vectorization support: reference y[j] has aligned access   [ solctra.cpp(142,45) ]
+      remark #15388: vectorization support: reference ((rmi+i*24)->z)[j] has aligned access   [ solctra.cpp(143,21) ]
+      remark #15388: vectorization support: reference z[j] has aligned access   [ solctra.cpp(143,45) ]
       remark #15305: vectorization support: vector length 2
       remark #15399: vectorization support: unroll factor set to 4
       remark #15309: vectorization support: normalized vectorization overhead 0.100
@@ -221,21 +221,38 @@ LOOP BEGIN at solctra.cpp(74,5) inlined into solctra.cpp(112,9)
       remark #15475: --- begin vector cost summary ---
       remark #15476: scalar cost: 21 
       remark #15477: vector cost: 7.500 
-      remark #15478: estimated potential speedup: 2.790 
+      remark #15478: estimated potential speedup: 2.720 
       remark #15488: --- end vector cost summary ---
    LOOP END
 
-   LOOP BEGIN at solctra.cpp(95,20) inlined into solctra.cpp(112,9)
+   LOOP BEGIN at solctra.cpp(139,17)
+   <Remainder loop for vectorization>
+      remark #15388: vectorization support: reference ((rmi+i*24)->x)[j] has aligned access   [ solctra.cpp(141,21) ]
+      remark #15388: vectorization support: reference x[j] has aligned access   [ solctra.cpp(141,45) ]
+      remark #15388: vectorization support: reference ((rmi+i*24)->y)[j] has aligned access   [ solctra.cpp(142,21) ]
+      remark #15388: vectorization support: reference y[j] has aligned access   [ solctra.cpp(142,45) ]
+      remark #15388: vectorization support: reference ((rmi+i*24)->z)[j] has aligned access   [ solctra.cpp(143,21) ]
+      remark #15388: vectorization support: reference z[j] has aligned access   [ solctra.cpp(143,45) ]
+      remark #15305: vectorization support: vector length 2
+      remark #15309: vectorization support: normalized vectorization overhead 0.593
+      remark #15301: REMAINDER LOOP WAS VECTORIZED
+   LOOP END
+
+   LOOP BEGIN at solctra.cpp(139,17)
+   <Remainder loop for vectorization>
+   LOOP END
+
+   LOOP BEGIN at solctra.cpp(147,17)
    <Peeled loop for vectorization>
    LOOP END
 
-   LOOP BEGIN at solctra.cpp(95,20) inlined into solctra.cpp(112,9)
-      remark #15389: vectorization support: reference ((Rmf+i*24)->x)[j] has unaligned access   [ solctra.cpp(97,13) ]
-      remark #15389: vectorization support: reference x[j+1] has unaligned access   [ solctra.cpp(97,37) ]
-      remark #15388: vectorization support: reference ((Rmf+i*24)->y)[j] has aligned access   [ solctra.cpp(98,13) ]
-      remark #15389: vectorization support: reference y[j+1] has unaligned access   [ solctra.cpp(98,37) ]
-      remark #15388: vectorization support: reference ((Rmf+i*24)->z)[j] has aligned access   [ solctra.cpp(99,13) ]
-      remark #15389: vectorization support: reference z[j+1] has unaligned access   [ solctra.cpp(99,37) ]
+   LOOP BEGIN at solctra.cpp(147,17)
+      remark #15389: vectorization support: reference ((rmf+i*24)->x)[j] has unaligned access   [ solctra.cpp(149,21) ]
+      remark #15389: vectorization support: reference x[j+1] has unaligned access   [ solctra.cpp(149,45) ]
+      remark #15388: vectorization support: reference ((rmf+i*24)->y)[j] has aligned access   [ solctra.cpp(150,21) ]
+      remark #15389: vectorization support: reference y[j+1] has unaligned access   [ solctra.cpp(150,45) ]
+      remark #15388: vectorization support: reference ((rmf+i*24)->z)[j] has aligned access   [ solctra.cpp(151,21) ]
+      remark #15389: vectorization support: reference z[j+1] has unaligned access   [ solctra.cpp(151,45) ]
       remark #15381: vectorization support: unaligned access used inside loop body
       remark #15305: vectorization support: vector length 2
       remark #15399: vectorization support: unroll factor set to 4
@@ -248,37 +265,30 @@ LOOP BEGIN at solctra.cpp(74,5) inlined into solctra.cpp(112,9)
       remark #15475: --- begin vector cost summary ---
       remark #15476: scalar cost: 21 
       remark #15477: vector cost: 10.000 
-      remark #15478: estimated potential speedup: 2.030 
+      remark #15478: estimated potential speedup: 2.040 
       remark #15488: --- end vector cost summary ---
    LOOP END
 
-   LOOP BEGIN at solctra.cpp(95,20) inlined into solctra.cpp(112,9)
+   LOOP BEGIN at solctra.cpp(147,17)
    <Alternate Alignment Vectorized Loop>
    LOOP END
 
-   LOOP BEGIN at solctra.cpp(95,20) inlined into solctra.cpp(112,9)
+   LOOP BEGIN at solctra.cpp(147,17)
    <Remainder loop for vectorization>
-      remark #15389: vectorization support: reference ((Rmf+i*24)->x)[j] has unaligned access   [ solctra.cpp(97,13) ]
-      remark #15389: vectorization support: reference x[j+1] has unaligned access   [ solctra.cpp(97,37) ]
-      remark #15389: vectorization support: reference ((Rmf+i*24)->y)[j] has unaligned access   [ solctra.cpp(98,13) ]
-      remark #15389: vectorization support: reference y[j+1] has unaligned access   [ solctra.cpp(98,37) ]
-      remark #15388: vectorization support: reference ((Rmf+i*24)->z)[j] has aligned access   [ solctra.cpp(99,13) ]
-      remark #15389: vectorization support: reference z[j+1] has unaligned access   [ solctra.cpp(99,37) ]
+      remark #15389: vectorization support: reference ((rmf+i*24)->x)[j] has unaligned access   [ solctra.cpp(149,21) ]
+      remark #15389: vectorization support: reference x[j+1] has unaligned access   [ solctra.cpp(149,45) ]
+      remark #15389: vectorization support: reference ((rmf+i*24)->y)[j] has unaligned access   [ solctra.cpp(150,21) ]
+      remark #15389: vectorization support: reference y[j+1] has unaligned access   [ solctra.cpp(150,45) ]
+      remark #15388: vectorization support: reference ((rmf+i*24)->z)[j] has aligned access   [ solctra.cpp(151,21) ]
+      remark #15389: vectorization support: reference z[j+1] has unaligned access   [ solctra.cpp(151,45) ]
       remark #15381: vectorization support: unaligned access used inside loop body
       remark #15335: remainder loop was not vectorized: vectorization possible but seems inefficient. Use vector always directive or -vec-threshold0 to override 
       remark #15305: vectorization support: vector length 2
       remark #15309: vectorization support: normalized vectorization overhead 0.912
    LOOP END
-LOOP END
 
-LOOP BEGIN at solctra.cpp(128,9)
-   remark #15344: loop was not vectorized: vector dependence prevents vectorization
-   remark #15346: vector dependence: assumed ANTI dependence between data[base+j] (145:21) and B.B (164:21)
-   remark #15346: vector dependence: assumed FLOW dependence between B.B (164:21) and data[base+j] (145:21)
-
-   LOOP BEGIN at solctra.cpp(135,17)
-      remark #15316: simd loop was not vectorized: scalar assignment in simd loop is prohibited, consider private, lastprivate or reduction clauses   [ solctra.cpp(162,21) ]
-      remark #15552: loop was not vectorized with "simd"
+   LOOP BEGIN at solctra.cpp(156,17)
+      remark #15331: loop was not vectorized: precise FP model implied by the command line or a directive prevents vectorization. Consider using fast FP model   [ solctra.cpp(182,21) ]
    LOOP END
 LOOP END
 ===========================================================================

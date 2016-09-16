@@ -109,7 +109,7 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
 #pragma omp parallel
     {
         //printf("before R_vectors\n");
-        R_vectors(data.coils, point, rmi, rmf);
+        //R_vectors(data.coils, point, rmi, rmf);
         //printf("after R_vectors\n");
         const int myThread = omp_get_thread_num();
         //const int myThread = 0;
@@ -129,12 +129,32 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
             for (int jj = 0; jj < TOTAL_OF_GRADES; jj += GRADES_PER_PAGE)
             {
                 const unsigned final = (TOTAL_OF_GRADES < jj + GRADES_PER_PAGE) ? TOTAL_OF_GRADES : jj + GRADES_PER_PAGE;
+                const int base = i * TOTAL_OF_GRADES_PADDED;
+                double* x = &data.coils.x[base];
+                double* y = &data.coils.y[base];
+                double* z = &data.coils.z[base];
 #pragma omp simd
 //#pragma ivdep
 #pragma vector aligned
                 for (int j = jj; j < final ; ++j)
                 {
-                    const int base = i * TOTAL_OF_GRADES_PADDED;
+                    rmi[i].x[j] = point.x - x[j];
+                    rmi[i].y[j] = point.y - y[j];
+                    rmi[i].z[j] = point.z - z[j];
+                }
+//#pragma ivdep
+#pragma omp simd
+                for (int j = jj; j < final ; ++j)
+                {
+                    rmf[i].x[j] = point.x - x[j + 1];
+                    rmf[i].y[j] = point.y - y[j + 1];
+                    rmf[i].z[j] = point.z - z[j + 1];
+                }
+//#pragma omp simd
+#pragma ivdep
+#pragma vector aligned
+                for (int j = jj; j < final ; ++j)
+                {
                     const double norm_Rmi = sqrt((( rmi[i].x[j] * rmi[i].x[j] ) + ( rmi[i].y[j] * rmi[i].y[j] ) +
                                                   ( rmi[i].z[j] * rmi[i].z[j] )));
                     const double norm_Rmf = sqrt((( rmf[i].x[j] * rmf[i].x[j] ) + ( rmf[i].y[j] * rmf[i].y[j] ) +
