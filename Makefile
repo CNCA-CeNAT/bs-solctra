@@ -42,7 +42,7 @@ mpi: $(SOURCE)
 	$(MPICC) -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
 
 mpi-icpc: $(SOURCE)
-	mpiicpc -g -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra -qopenmp -Wall $(SOURCE)
+	mpiicpc -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra -qopenmp -Wall $(SOURCE)
 
 clean:
 	rm -f solctra
