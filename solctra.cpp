@@ -116,10 +116,10 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
         B_perIteration[myThread].x = 0;
         B_perIteration[myThread].y = 0;
         B_perIteration[myThread].z = 0;
-        cartesian B = {0, 0, 0};
-        //double Bx = 0;
-        //double By = 0;
-        //double Bz = 0;
+        //cartesian B = {0, 0, 0};
+        double Bx = 0;
+        double By = 0;
+        double Bz = 0;
         //printf("before for\n");
             // **************************************************************
             // * Implementing strip-mining to allow more threads per particle
@@ -155,7 +155,8 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
                 }
 //#pragma omp simd private(B)
 //#pragma omp simd private(Bx) private(By) private(Bz)
-#pragma ivdep
+#pragma omp simd reduction(+:Bx) reduction(-:By) reduction(+:Bz)
+//#pragma ivdep
 #pragma vector aligned
                 for (int j = jj; j < final ; ++j)
                 {
@@ -183,18 +184,21 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
                     V.z = rmi[i].z[j] * C;
 
                     //cross product in equation 8
-                    B.x = B.x + (( U.y * V.z ) - ( U.z * V.y ));
-                    B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
-                    B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
+                    //B.x = B.x + (( U.y * V.z ) - ( U.z * V.y ));
+                    //B.y = B.y - (( U.x * V.z ) - ( U.z * V.x ));
+                    //B.z = B.z + (( U.x * V.y ) - ( U.y * V.x ));
+                    Bx = Bx + (( U.y * V.z ) - ( U.z * V.y ));
+                    By = By - (( U.x * V.z ) - ( U.z * V.x ));
+                    Bz = Bz + (( U.x * V.y ) - ( U.y * V.x ));
                 }
             }
         //std::cout << "after for for" << std::endl;
-        B_perIteration[myThread].x += B.x;
-        B_perIteration[myThread].y -= B.y;
-        B_perIteration[myThread].z += B.z;
-        //B_perIteration[myThread].x += Bx;
-        //B_perIteration[myThread].y -= By;
-        //B_perIteration[myThread].z += Bz;
+//        B_perIteration[myThread].x += B.x;
+//        B_perIteration[myThread].y -= B.y;
+//        B_perIteration[myThread].z += B.z;
+        B_perIteration[myThread].x += Bx;
+        B_perIteration[myThread].y -= By;
+        B_perIteration[myThread].z += Bz;
     }
     //printf("after for\n");;
 
