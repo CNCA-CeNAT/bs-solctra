@@ -136,19 +136,19 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
                 double* x = &data.coils.x[base];
                 double* y = &data.coils.y[base];
                 double* z = &data.coils.z[base];
-//#pragma omp simd
-#pragma ivdep
-#pragma vector aligned
+#pragma omp simd
+//#pragma ivdep
+//#pragma vector aligned
                 for (int j = jj; j < final ; ++j)
                 {
                     rmi[i].x[j] = point.x - x[j];
                     rmi[i].y[j] = point.y - y[j];
                     rmi[i].z[j] = point.z - z[j];
-                }
-#pragma ivdep
+//                }
+////#pragma ivdep
 //#pragma omp simd
-                for (int j = jj; j < final ; ++j)
-                {
+//                for (int j = jj; j < final ; ++j)
+//                {
                     rmf[i].x[j] = point.x - x[j + 1];
                     rmf[i].y[j] = point.y - y[j + 1];
                     rmf[i].z[j] = point.z - z[j + 1];

@@ -217,7 +217,7 @@ LOOP BEGIN at solctra.cpp(131,9)
       remark #15305: vectorization support: vector length 4
       remark #15399: vectorization support: unroll factor set to 4
       remark #15309: vectorization support: normalized vectorization overhead 0.050
-      remark #15300: LOOP WAS VECTORIZED
+      remark #15301: OpenMP SIMD LOOP WAS VECTORIZED
       remark #15448: unmasked aligned unit stride loads: 3 
       remark #15449: unmasked aligned unit stride stores: 3 
       remark #15475: --- begin vector cost summary ---
@@ -259,7 +259,7 @@ LOOP BEGIN at solctra.cpp(131,9)
       remark #15305: vectorization support: vector length 4
       remark #15399: vectorization support: unroll factor set to 4
       remark #15309: vectorization support: normalized vectorization overhead 0.341
-      remark #15300: LOOP WAS VECTORIZED
+      remark #15301: OpenMP SIMD LOOP WAS VECTORIZED
       remark #15442: entire loop may be executed in remainder
       remark #15450: unmasked unaligned unit stride loads: 3 
       remark #15451: unmasked unaligned unit stride stores: 3 
