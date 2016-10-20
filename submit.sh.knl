@@ -1,0 +1,39 @@
+#!/bin/bash
+#SBATCH -J solctra           # job name
+#SBATCH -o solctra.o%j       # output and error file name (%j expands to jobID)
+#SBATCH -n 4              # total number of mpi tasks requested
+#SBATCH -N 1              # total number of mpi tasks requested
+#SBATCH -p Flat-SNC-4     # queue (partition) -- normal, development, etc., Flat-SNC-4 Flat-All2All Flat-Quadrant
+#SBATCH -t 01:00:00        # run time (hh:mm:ss) - 1.5 hours
+
+####SBATCH --mail-user=ldcl289@gmail.com
+####SBATCH --mail-type=begin  # email me when the job starts
+####SBATCH --mail-type=end    # email me when the job finishes
+
+export RESULTS_DIR=$SCRATCH
+export OMP_NESTED=true
+export OMP_NUM_THREADS=16
+export KMP_SETTINGS=TRUE
+export KMP_HOT_TEAMS=1
+export KMP_HOT_TEAMS_MAX_LEVEL=2
+#export OMP_PROC_BIND=spread
+#export OMP_PLACES=cores
+#export KMP_AFFINITY=verbose,norespect,scatter
+#export KMP_AFFINITY=verbose,norespect,compact
+#export KMP_PLACE_THREADS=2T
+#export I_MPI_DEBUG=5,pid,level
+#export I_MPI_PIN_DOMAIN=omp:platform
+#export I_MPI_PIN_DOMAIN=omp:scatter
+#export I_MPI_PIN_DOMAIN=$OMP_NUM_THREADS*4:scatter
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=16,17,34,35,84,85,102,103,152,153,170,171,220,221,238,239
+
+
+#ibrun tacc_affinity ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
+#ibrun yo_affinity ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
+ibrun ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
+#ibrun ./solctra -length 2 -particles particles.txt -id ${SLURM_JOBID}
+#ibrun tacc_affinity ./solctra.serial -length 1 -particles particles.txt -id serial_${SLURM_JOBID}
+
+mv results_${SLURM_JOBID} $RESULTS_DIR/solctra/results/.
+mv stdout_${SLURM_JOBID}.log $RESULTS_DIR/solctra/results/.
+mv solctra.o${SLURM_JOBID} $RESULTS_DIR/solctra/results/.

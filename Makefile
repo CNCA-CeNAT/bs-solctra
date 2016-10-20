@@ -42,7 +42,16 @@ mpi: $(SOURCE)
 	$(MPICC) -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
 
 mpi-icpc: $(SOURCE)
-	mpiicpc -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra -qopenmp -Wall $(SOURCE)
+	mpic++ -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra -qopenmp -Wall $(SOURCE)
+
+mpi-icpc-serial: $(SOURCE)
+	mpic++ -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.serial -qopenmp-stubs -no-vec $(SOURCE)
+
+mpi-icpc-knl: $(SOURCE)
+	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.knl -qopenmp -Wall $(SOURCE) -DKNL
+
+mpi-icpc-mic: $(SOURCE)
+	mpic++ -mmic -g -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.mic -qopenmp -Wall $(SOURCE)
 
 clean:
 	rm -f solctra
