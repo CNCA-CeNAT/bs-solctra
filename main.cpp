@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cstring>
 
-const unsigned DEFAULT_STRING_BUFFER = 30;
+const unsigned DEFAULT_STRING_BUFFER = 100;
 const unsigned DEFAULT_STEPS = 500000;
 const double DEFAULT_STEP_SIZE = 0.001;
 const unsigned DEFAULT_PRECISION = 5;
@@ -208,11 +208,10 @@ int main(int argc, char** argv)
     //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    const size_t sizeToAllocate = sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS;
     GlobalData data;
-    data.coils.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    data.coils.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    data.coils.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.coils.x = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.coils.y = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.coils.z = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
     if(0 == myRank)
     {
         load_coil_data(data.coils.x, data.coils.y, data.coils.z, PATH_TO_RESOURCES);
@@ -230,10 +229,10 @@ int main(int argc, char** argv)
     //data.e_roof.y = eRoofY;
     //data.e_roof.z = eRoofZ;
     //data.leng_segment = leng_segment;
-    data.e_roof.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    data.e_roof.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    data.e_roof.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    data.leng_segment = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.e_roof.x = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.e_roof.y = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.e_roof.z = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.leng_segment = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
     if(0 == myRank)
     {
         e_roof(data);
@@ -272,10 +271,10 @@ int main(int argc, char** argv)
         }
         handler << jobId << "," << commSize << "," << ompSize << "," << length << "," << steps << "," <<  stepSize << "," << output << "," << (endTime - startTime) << "," << processor_name << std::endl;
         handler.close();
+	std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     }
     delete[] jobId;
     delete[] output;
     MPI_Finalize();
-    std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
-    return (5);
+    return 0;
 }

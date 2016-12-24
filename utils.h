@@ -11,7 +11,7 @@
 #define     I       -4350
 #define ALIGNMENT_SIZE 64
 #ifdef KNL
-#define GRADES_PER_PAGE ALIGNMENT_SIZE  * 4 / sizeof(double)
+#define GRADES_PER_PAGE ALIGNMENT_SIZE  * KNL / sizeof(double)
 #else
 #define GRADES_PER_PAGE ALIGNMENT_SIZE / sizeof(double)
 #endif
@@ -19,6 +19,7 @@
 #define TOTAL_OF_GRADES_PADDED 384
 #define TOTAL_OF_COILS 12
 #define PATH_TO_RESOURCES "resources"
+#define SIZE_TO_ALLOCATE sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS
 
 
 #include <cstdio>
