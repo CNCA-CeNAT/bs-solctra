@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J solctra           # job name
 #SBATCH -o solctra.o%j       # output and error file name (%j expands to jobID)
-#SBATCH -n 2              # total number of mpi tasks requested
+#SBATCH -n 4              # total number of mpi tasks requested
 #SBATCH -N 1              # total number of mpi tasks requested
 #SBATCH -p normal     # queue (partition) -- normal, development, etc.
 #SBATCH -t 01:00:00        # run time (hh:mm:ss) - 1.5 hours
@@ -12,14 +12,14 @@
 
 export RESULTS_DIR=$SCRATCH
 export OMP_NESTED=true
-export OMP_NUM_THREADS=4
+export OMP_NUM_THREADS=2
 export KMP_SETTINGS=TRUE
 #export OMP_PROC_BIND=spread
 #export OMP_PLACES=cores
 #export KMP_AFFINITY=verbose,norespect,compact
 
 
-ibrun tacc_affinity ./solctra -length 16 -particles particles.txt -id ${SLURM_JOBID}
+ibrun tacc_affinity ./solctra -length 8 -particles particles.txt -id ${SLURM_JOBID}
 #ibrun tacc_affinity ./solctra.serial -length 1 -particles particles.txt -id serial_${SLURM_JOBID}
 
 mv results_${SLURM_JOBID} $RESULTS_DIR/solctra/results/.
