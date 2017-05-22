@@ -39,11 +39,11 @@ void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
     for (int num = 0; num < TOTAL_OF_COILS; num++)
     {
-        char coil_file[30];
-        std::string tmp = path + "/Bobina%dm.txt";
+        //char coil_file[30];
+        std::string tmp = path + "/Bobina"+std::to_string(num)+"m.txt";
         //Set Coil files location
-        sprintf(coil_file, tmp.c_str(), num);
-        loadFile(&(x[num * TOTAL_OF_GRADES_PADDED]), &(y[num * TOTAL_OF_GRADES_PADDED]), &(z[num * TOTAL_OF_GRADES_PADDED]), TOTAL_OF_GRADES + 1, coil_file);
+        //sprintf(coil_file, tmp.c_str(), num);
+        loadFile(&(x[num * TOTAL_OF_GRADES_PADDED]), &(y[num * TOTAL_OF_GRADES_PADDED]), &(z[num * TOTAL_OF_GRADES_PADDED]), TOTAL_OF_GRADES + 1, tmp);
     }
 }
 
@@ -64,6 +64,39 @@ void e_roof(GlobalData& data)
             data.e_roof.x[base + i] = segment.x * leng_segment_inverted;
             data.e_roof.y[base + i] = segment.y * leng_segment_inverted;
             data.e_roof.z[base + i] = segment.z * leng_segment_inverted;
+        }
+    }
+}
+
+void R_vectors(const Coil& coil, const cartesian& point, Coil* Rmi, Coil* Rmf)
+{
+#pragma omp for
+    for(unsigned int i = 0 ; i < TOTAL_OF_COILS ; ++i)
+    {
+        const int base = i * TOTAL_OF_GRADES_PADDED;
+        double* x = &coil.x[base];
+        double* y = &coil.y[base];
+        double* z = &coil.z[base];
+//#pragma nounroll
+//#pragma ivdep
+#pragma vector aligned
+#pragma omp simd
+        for (int j = 0; j < TOTAL_OF_GRADES; j++)
+        {
+            Rmi[i].x[j] = point.x - x[j];
+            Rmi[i].y[j] = point.y - y[j];
+            Rmi[i].z[j] = point.z - z[j];
+        }
+//#pragma nounroll
+//#pragma ivdep
+#pragma omp simd
+//This gives a segmentation fault
+//#pragma vector aligned
+        for (int j = 0; j < TOTAL_OF_GRADES; j++)
+        {
+            Rmf[i].x[j] = point.x - x[j + 1];
+            Rmf[i].y[j] = point.y - y[j + 1];
+            Rmf[i].z[j] = point.z - z[j + 1];
         }
     }
 }
@@ -103,6 +136,23 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
                 double* x = &data.coils.x[base];
                 double* y = &data.coils.y[base];
                 double* z = &data.coils.z[base];
+#pragma omp simd
+//#pragma ivdep
+//#pragma vector aligned
+                for (int j = jj; j < final ; ++j)
+                {
+                    rmi[i].x[j] = point.x - x[j];
+                    rmi[i].y[j] = point.y - y[j];
+                    rmi[i].z[j] = point.z - z[j];
+//                }
+////#pragma ivdep
+//#pragma omp simd
+//                for (int j = jj; j < final ; ++j)
+//                {
+                    rmf[i].x[j] = point.x - x[j + 1];
+                    rmf[i].y[j] = point.y - y[j + 1];
+                    rmf[i].z[j] = point.z - z[j + 1];
+                }
 //#pragma omp simd private(B)
 //#pragma omp simd private(Bx) private(By) private(Bz)
 #pragma omp simd reduction(+:Bx) reduction(-:By) reduction(+:Bz)
@@ -110,14 +160,10 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
 #pragma vector aligned
                 for (int j = jj; j < final ; ++j)
                 {
-                    const double rmi_x = point.x - x[j];
-                    const double rmi_y = point.y - y[j];
-                    const double rmi_z = point.z - z[j];
-                    const double rmf_x = point.x - x[j+1];
-                    const double rmf_y = point.y - y[j+1];
-                    const double rmf_z = point.z - z[j+1];
-                    const double norm_Rmi = sqrt(rmi_x * rmi_x + rmi_y * rmi_y + rmi_z * rmi_z);
-                    const double norm_Rmf = sqrt(rmf_x * rmf_x + rmf_y * rmf_y + rmf_z * rmf_z);
+                    const double norm_Rmi = sqrt((( rmi[i].x[j] * rmi[i].x[j] ) + ( rmi[i].y[j] * rmi[i].y[j] ) +
+                                                  ( rmi[i].z[j] * rmi[i].z[j] )));
+                    const double norm_Rmf = sqrt((( rmf[i].x[j] * rmf[i].x[j] ) + ( rmf[i].y[j] * rmf[i].y[j] ) +
+                                                  ( rmf[i].z[j] * rmf[i].z[j] )));
 
                     //firts vector of cross product in equation 8
                     cartesian U;
@@ -125,19 +171,17 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
                     U.y = multiplier * data.e_roof.y[base + j];
                     U.z = multiplier * data.e_roof.z[base + j];
 
-                    const double normAdded = norm_Rmi + norm_Rmf;
-
                     //second vector of cross product in equation 8
                     const double C = (
-                            (( 2 * data.leng_segment[base + j] * normAdded ) /
+                            (( 2 * ( data.leng_segment[base + j] ) * ( norm_Rmi + norm_Rmf )) /
                              ( norm_Rmi * norm_Rmf )) *
-                            ( 1 / (normAdded * normAdded -
+                            (( 1 ) / (( norm_Rmi + norm_Rmf ) * ( norm_Rmi + norm_Rmf ) -
                                       data.leng_segment[base + j] * data.leng_segment[base + j] )));
 
                     cartesian V;
-                    V.x = rmi_x * C;
-                    V.y = rmi_y * C;
-                    V.z = rmi_z * C;
+                    V.x = rmi[i].x[j] * C;
+                    V.y = rmi[i].y[j] * C;
+                    V.z = rmi[i].z[j] * C;
 
                     //cross product in equation 8
                     //B.x = B.x + (( U.y * V.z ) - ( U.z * V.y ));
@@ -173,13 +217,13 @@ cartesian magnetic_field(Coil* rmi, Coil* rmf, const GlobalData& data, const car
     return B;
 }
 
-void RK4(const GlobalData& data, const char* output, const cartesian& start_point, const int steps, const double& step_size, const int particle, const int mode)
+void RK4(const GlobalData& data, const std::string& output, const cartesian& start_point, const int steps, const double& step_size, const int particle, const int mode)
 {
     Coil rmi[TOTAL_OF_COILS];
     Coil rmf[TOTAL_OF_COILS];
-    printf("Before initializeGlobals\n");
+    //printf("Before initializeGlobals\n");
     initializeGlobals(rmi, rmf);
-    printf("RK4 begins...\n");
+    //printf("RK4 begins...\n");
     cartesian p0;
     cartesian p1 = {0, 0, 0};
     cartesian p2 = {0, 0, 0};
@@ -201,14 +245,11 @@ void RK4(const GlobalData& data, const char* output, const cartesian& start_poin
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
     FILE* handler;
-    char file_name[30];
-    printf("Rank=[%d] working before file definition.\n", myRank);
-    sprintf(file_name,"%s/path%03d.txt", output, particle);
-    printf("Rank=[%d] working on file=[%s].\n", myRank, file_name);
-    handler = fopen(file_name, "w");
+    std::string file_name = output +  "/path" + getZeroPadded(particle) + ".txt";
+    handler = fopen(file_name.c_str(), "w");
     if(nullptr == handler)
     {
-        printf("Unable to open file=[%s]. Nothing to do\n", file_name);
+        printf("Unable to open file=[%s]. Nothing to do\n", file_name.c_str());
         exit(0);
     }
     fprintf(handler, "%e\t%e\t%e\n", start_point.x, start_point.y, start_point.z);
@@ -283,10 +324,9 @@ void RK4(const GlobalData& data, const char* output, const cartesian& start_poin
         //}
     }
     fclose(handler);
-    finishGlobal(rmi, rmf);
 }
 
-void runParticles(const GlobalData& data, const char* output, const Coil& particles, const int length, const int steps, const double& step_size, const int mode)
+void runParticles(const GlobalData& data, const std::string& output, const Coil& particles, const int length, const int steps, const double& step_size, const int mode)
 {
     int myRank;
     int commSize;

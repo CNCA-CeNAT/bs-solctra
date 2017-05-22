@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <fstream>
 
 #ifndef __INTEL_COMPILER
 #include <cstdlib>
@@ -21,27 +22,34 @@ void _mm_free(void* pointer)
 }
 #endif
 
-void loadFile(double* x, double* y, double* z, const int length, const char* path)
+void loadFile(double* x, double* y, double* z, const int length, const std::string& path)
 {
-    FILE* file_buff;
+    std::ifstream handler(path);
+    //FILE* file_buff;
     //Open file
-    file_buff = fopen(path, "r");
-    if (file_buff == nullptr)
+    //file_buff = fopen(path.c_str(), "r");
+    //if (file_buff == nullptr)
+    if(!handler.is_open())
     {
-        printf("Error al abrir archivo \n");
+        printf("Error al abrir archivo=[%s] \n", path.c_str());
     }
     else
     {
         double localX, localY, localZ;
-        printf("Loading %s with length=%d\n", path, length);
-        for (int point = 0; point < length; point++)
+        printf("Loading %s with length=%d\n", path.c_str(), length);
+
+        int point = 0;
+        std::string line;
+        while ( std::getline(handler, line) && point < length)
         {
-            fscanf(file_buff, "%le %le %le", &localX, &localY, &localZ);
+            //printf("Line[%d]=[%s]\n", point, line.c_str());
+            sscanf(line.c_str(), "%le %le %le", &localX, &localY, &localZ);
             x[point] = localX;
             y[point] = localY;
             z[point] = localZ;
+            ++point;
         }
-        fclose(file_buff);
+        handler.close();
     }
 
 }
@@ -53,11 +61,11 @@ double getCurrentTime()
     return static_cast<double>(tod.tv_sec) + static_cast<double>(tod.tv_usec) * 1.0e-6;
 }
 
-void createDirectoryIfNotExists(const char* path)
+void createDirectoryIfNotExists(const std::string& path)
 {
     if(!directoryExists(path))
     {
-        const int error = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        const int error = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if (0 > error)
         {
             printf("Error creating directory!n");
@@ -66,10 +74,10 @@ void createDirectoryIfNotExists(const char* path)
     }
 }
 
-bool directoryExists(const char* path)
+bool directoryExists(const std::string& path)
 {
     struct stat info;
-    if (stat(path, &info) != 0)
+    if (stat(path.c_str(), &info) != 0)
     {
         return false;
     }
@@ -81,4 +89,15 @@ bool directoryExists(const char* path)
     {
         return false;
     }
+}
+
+std::string getZeroPadded(const int num)
+{
+    std::string value = std::to_string(num);
+    const size_t numSize = value.size();
+    for(size_t i = 0 ; i < 3 - numSize ; ++i)
+    {
+        value = "0" + value;
+    }
+    return value;
 }

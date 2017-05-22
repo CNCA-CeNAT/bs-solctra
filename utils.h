@@ -18,11 +18,12 @@
 #define TOTAL_OF_GRADES 360
 #define TOTAL_OF_GRADES_PADDED 384
 #define TOTAL_OF_COILS 12
-#define PATH_TO_RESOURCES "resources"
-#define SIZE_TO_ALLOCATE sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS
+//#define PATH_TO_RESOURCES "resources"
 
 
 #include <cstdio>
+#include <string>
+
 struct cartesian
 {
     double x, y, z;
@@ -55,9 +56,11 @@ void _mm_free(void* pointer);
 
 #endif
 
-void loadFile(double* x, double* y, double* z, const int length, const char* path);
+void loadFile(double* x, double* y, double* z, const int length, const std::string& path);
 double getCurrentTime();
-void createDirectoryIfNotExists(const char* path);
-bool directoryExists(const char* path);
+void createDirectoryIfNotExists(const std::string& path);
+bool directoryExists(const std::string& path);
+std::string getZeroPadded(const int num);
+
 
 #endif //SOLCTRA_UTILS_H

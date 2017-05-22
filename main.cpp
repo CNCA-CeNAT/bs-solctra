@@ -12,7 +12,8 @@ const double DEFAULT_STEP_SIZE = 0.001;
 const unsigned DEFAULT_PRECISION = 5;
 const unsigned DEFAULT_PARTICLES= 1;
 const unsigned DEFAULT_MODE= 1;
-const char* DEFAULT_OUTPUT = "results";
+const std::string DEFAULT_OUTPUT = "results";
+const std::string DEFAULT_RESOURCES = "resources";
 
 unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
 {
@@ -60,18 +61,29 @@ void LoadParticles(const int& argc, char** argv, Coil& particles, const int leng
         {
             loadFile(particles.x, particles.y, particles.z, length, argv[i+1]);
             found = true;
-            printf("Before bcast particles0 [%e]\n", particles.x[1]);
             break;
         }
     }
-    printf("Before bcast particles2\n");
     if(!found)
     {
         printf("ERROR: particles path must be given!!\n");
         exit(1);
     }
-    printf("Before bcast particles4\n");
 }
+
+std::string getResourcePath(const int& argc, char** argv)
+{
+    for(int i = 1 ; i < argc - 1 ; ++i)
+    {
+        std::string param = argv[i];
+        if("-resource" == param)
+        {
+            return std::string(argv[i+1]);
+        }
+    }
+    return DEFAULT_RESOURCES;
+}
+
 unsigned getParticlesLengthFromArgs(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -98,23 +110,18 @@ unsigned getModeFromArgs(const int& argc, char** argv)
     return DEFAULT_MODE;
 }
 
-void getJobId(const int& argc, char** argv, char* &id)
+std::string getJobId(const int& argc, char** argv)
 {
-    bool found = false;
     for(int i = 1 ; i < argc - 1 ; ++i)
     {
         std::string tmp = argv[i];
         if(tmp == "-id")
         {
-            found = true;
-            strcpy(id, argv[i+1]);
+            return std::string(argv[i+1]);
         }
     }
-    if(!found)
-    {
-        printf("ERROR: job id must be given!!\n");
-        exit(1);
-    }
+    printf("ERROR: job id must be given!!\n");
+    exit(1);
 }
 
 int main(int argc, char** argv)
@@ -125,13 +132,14 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     const int ompSize = omp_get_max_threads();
+    std::string resourcePath;
     unsigned steps;
     double stepSize;
     unsigned precision;
     unsigned int length;
     unsigned int mode;
-    char* output = new char[DEFAULT_STRING_BUFFER];
-    char* jobId = new char[DEFAULT_STRING_BUFFER];
+    std::string output;
+    std::string jobId;
     std::ofstream handler;
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int name_len;
@@ -139,16 +147,18 @@ int main(int argc, char** argv)
     if(0 == myRank)
     {
         std::cout << "Communicator Size=[" << commSize << "]." << std::endl;
+        resourcePath = getResourcePath(argc, argv);
         steps = getStepsFromArgs(argc, argv);
         stepSize = getStepSizeFromArgs(argc, argv);
         precision = getPrintPrecisionFromArgs(argc, argv);
         length = getParticlesLengthFromArgs(argc, argv);
         mode = getModeFromArgs(argc, argv);
-        getJobId(argc, argv, jobId);
-        sprintf(output, "results_%s", jobId);
+        jobId = getJobId(argc, argv);
+        output = "results_" + jobId;
         createDirectoryIfNotExists(output);
         std::cout.precision(precision);
         std::cout << "Running with:" << std::endl;
+        std::cout << "Resource Path=[" << resourcePath << "]." << std::endl;
         std::cout << "JobId=[" << jobId << "]." << std::endl;
         std::cout << "Steps=[" << steps << "]." << std::endl;
         std::cout << "Steps size=[" << stepSize << "]." << std::endl;
@@ -157,8 +167,7 @@ int main(int argc, char** argv)
         std::cout << "Output path=[" << output << "]." << std::endl;
         std::cout << "MPI size=[" << commSize << "]." << std::endl;
         std::cout << "OpenMP size=[" << ompSize << "]." << std::endl;
-        char file_name[30];
-        sprintf(file_name,"stdout_%s.log", jobId);
+        std::string file_name = "stdout_"+jobId+".log";
         handler.open(file_name);
         if(!handler.is_open())
         {
@@ -181,7 +190,20 @@ int main(int argc, char** argv)
     MPI_Bcast(&precision, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&length, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&mode, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast(output, DEFAULT_STRING_BUFFER, MPI_CHAR, 0, MPI_COMM_WORLD);
+    
+    unsigned int outputSize = static_cast<unsigned int>(output.size()); 
+    MPI_Bcast(&outputSize, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    char* tmp = new char[outputSize + 1];
+    if(0 == myRank)
+    {
+        std::strcpy(tmp, output.c_str());
+    }
+    MPI_Bcast(tmp, outputSize, MPI_CHAR, 0, MPI_COMM_WORLD);
+    if(0 != myRank)
+    {
+       output = std::string(tmp);
+    }
+    delete[] tmp;
 
     Coil particles;
     particles.x = static_cast<double*>(_mm_malloc(sizeof(double) * length, ALIGNMENT_SIZE));
@@ -191,7 +213,6 @@ int main(int argc, char** argv)
     {
         LoadParticles(argc, argv, particles, length);
     }
-    printf("Before bcast particles6 =[%d]\n", myRank);
     MPI_Bcast(particles.x, length, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(particles.y, length, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(particles.z, length, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -208,13 +229,14 @@ int main(int argc, char** argv)
     //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
     //double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    const size_t sizeToAllocate = sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS;
     GlobalData data;
-    data.coils.x = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
-    data.coils.y = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
-    data.coils.z = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.coils.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.coils.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.coils.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     if(0 == myRank)
     {
-        load_coil_data(data.coils.x, data.coils.y, data.coils.z, PATH_TO_RESOURCES);
+        load_coil_data(data.coils.x, data.coils.y, data.coils.z, resourcePath);
         //std::cout << x[TOTAL_OF_GRADES_PADDED] << "|" << y[TOTAL_OF_GRADES_PADDED] << "|" << z[TOTAL_OF_GRADES_PADDED] << std::endl;
         //std::cout << x[TOTAL_OF_GRADES_PADDED*2] << "|" << y[TOTAL_OF_GRADES_PADDED*2] << "|" << z[TOTAL_OF_GRADES_PADDED*2] << std::endl;
     }
@@ -229,10 +251,10 @@ int main(int argc, char** argv)
     //data.e_roof.y = eRoofY;
     //data.e_roof.z = eRoofZ;
     //data.leng_segment = leng_segment;
-    data.e_roof.x = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
-    data.e_roof.y = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
-    data.e_roof.z = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
-    data.leng_segment = static_cast<double*>(_mm_malloc(SIZE_TO_ALLOCATE, ALIGNMENT_SIZE));
+    data.e_roof.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.e_roof.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.e_roof.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
+    data.leng_segment = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     if(0 == myRank)
     {
         e_roof(data);
@@ -273,8 +295,6 @@ int main(int argc, char** argv)
         handler.close();
 	std::cout << "Total execution time=[" << (endTime - startTime) << "]." << std::endl;
     }
-    delete[] jobId;
-    delete[] output;
     MPI_Finalize();
     return 0;
 }
