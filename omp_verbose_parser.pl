@@ -117,6 +117,7 @@ print "\n";
 print "\n";
 print "\n";
 print $thread_per_rank_table;
+print "\n\n";
 
 close($fh);
 close($fh_per_pid);

@@ -1,13 +1,45 @@
 #PBS -N solctra
-#PBS -q n4h24
-#PBS -l nodes=4:ppn=8
-#PBS -l walltime=06:00:00
-#PBS -d /home/ldcl289/solctra
+#PBS -q phi-n2h72
+#PBS -l nodes=2:ppn=8
+#PBS -l walltime=12:00:00
+#PBS -d /home/ldcl289/src/cadejos
 
-export OMP_NUM_THREADS=2
+export NN=2
+export NP=$((NN * 8))
+export LENGTH=$((NP * 16))
+export CHUNK_SIZE=8
+export OMP_NUM_THREADS=8
 export KMP_SETTINGS=TRUE
-cd ~/solctra
+export KMP_AFFINITY=verbose,warnings,respect,granularity=fine,duplicates,scatter,0,0
+export I_MPI_DEBUG=5,pid,level
+#export I_MPI_PIN_DOMAIN=omp:scatter
+export OMP_SCHEDULE=dynamic,4
+export OMP_NESTED=true
+#xport KMP_PLACE_THREADS=1T
+#export KMP_HW_SUBSET=8c,1t
+export KMP_HW_SUBSET=1T
 
-#/usr/lib64/openmpi/bin/mpiexec -n 16 --map-by core:PE=2 ./solctra -length 16 -particles particles.txt -id $PBS_JOBID
-#/usr/lib64/openmpi/bin/mpiexec -n 16 -bynode -bind-to-core -display-devel-allocation -display-devel-map --cpus-per-proc 2 ./solctra -length 16 -particles particles.txt -id $PBS_JOBID
-/usr/lib64/openmpi/bin/mpiexec -n 16 -display-devel-allocation -display-devel-map -bind-to-core  ./solctra -length 16 -particles particles.txt -id $PBS_JOBID
+export ID=${PBS_JOBID}
+#export ID=patito
+
+cd ~/src/cadejos
+pwd
+rm -Rf results_${ID}
+mkdir results_${ID}
+module load solctra
+
+#echo $PBS_NODEFILE  > nodefile.$PBS_JOBID
+#cat $PBS_NODEFILE  >> nodefile.$PBS_JOBID
+#env | grep NODE >> nodefile.$PBS_JOBID
+#env | grep HOST >> nodefile.$PBS_JOBID
+
+
+#mpirun -np $NP ./solctra.knl.${CHUNK_SIZE} -length $LENGTH -particles particles.txt -id $ID 2>&1 | tee results_$ID/log
+#mpiexec -np ${NP} ./solctra.knl.${CHUNK_SIZE} -length $LENGTH -particles particles.txt -id $ID -resource ~/src/cadejos/resources 2>&1 | tee results_$ID/log
+#mpirun -np ${NP} -f $PBS_NODEFILE ./solctra.knl.${CHUNK_SIZE} -length $LENGTH -particles particles.txt -id $ID -resource ~/src/cadejos/resources 2>&1 | tee results_$ID/log
+#mpirun -np ${NP} ./solctra.knl.${CHUNK_SIZE} -length $LENGTH -particles particles.txt -id $ID -resource ~/src/cadejos/resources 2>&1 | tee results_$ID/log
+mpirun -np ${NP} solctra -length $LENGTH -particles particles.txt -id $ID -resource ~/src/cadejos/resources 2>&1 | tee results_$ID/log
+#mpiexec -np ${NP} solctra -length $LENGTH -particles particles.txt -id $ID -resource ~/src/cadejos/resources 2>&1 | tee results_$ID/log
+#mpiexec -np ${NP} ./solctra.knl.${CHUNK_SIZE} -length $LENGTH -particles particles.txt -id $ID 2>&1 | tee results_$ID/log
+
+./omp_verbose_parser.pl -log results_$ID/log -out results_$ID | tee -a results_$ID/summary

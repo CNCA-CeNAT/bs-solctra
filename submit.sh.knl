@@ -1,65 +1,39 @@
 #!/bin/bash
 #SBATCH -J solctra           # job name
 #SBATCH -o solctra.o%j       # output and error file name (%j expands to jobID)
-#SBATCH -n 8              # total number of mpi tasks requested
+#SBATCH -n 4              # total number of mpi tasks requested
 #SBATCH -N 1              # total number of mpi tasks requested
-#SBATCH -p normal     # queue (partition) -- normal, development, etc., Flat-SNC-4 Flat-All2All Flat-Quadrant
-#SBATCH -t 02:00:00        # run time (hh:mm:ss) - 1.5 hours
+#SBATCH -p Flat-SNC-4     # queue (partition) -- normal, development, etc., Flat-SNC-4 Flat-All2All Flat-Quadrant
+#SBATCH -t 01:00:00        # run time (hh:mm:ss) - 1.5 hours
 
 ####SBATCH --mail-user=ldcl289@gmail.com
 ####SBATCH --mail-type=begin  # email me when the job starts
 ####SBATCH --mail-type=end    # email me when the job finishes
 
-export RESULTS_DIR=$SCRATCH/solctra/results/final_sprint
-source ./flags.sh
-
-#mv results_* $RESULTS_DIR/.
+export RESULTS_DIR=$SCRATCH
+export OMP_NESTED=true
+export OMP_NUM_THREADS=16
+export KMP_SETTINGS=TRUE
+export KMP_HOT_TEAMS=1
+export KMP_HOT_TEAMS_MAX_LEVEL=2
+#export OMP_PROC_BIND=spread
+#export OMP_PLACES=cores
+#export KMP_AFFINITY=verbose,norespect,scatter
+#export KMP_AFFINITY=verbose,norespect,compact
+#export KMP_PLACE_THREADS=2T
+#export I_MPI_DEBUG=5,pid,level
+#export I_MPI_PIN_DOMAIN=omp:platform
+#export I_MPI_PIN_DOMAIN=omp:scatter
+#export I_MPI_PIN_DOMAIN=$OMP_NUM_THREADS*4:scatter
+export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=16,17,34,35,84,85,102,103,152,153,170,171,220,221,238,239
 
 
 #ibrun tacc_affinity ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
 #ibrun yo_affinity ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
-#ibrun ./solctra.knl -length 8 -particles particles.txt -id ${SLURM_JOBID}
-ibrun ./solctra.knl.${CHUNK_SIZE} -length 8 -particles particles.txt -id ${SLURM_JOBID}
+ibrun ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
 #ibrun ./solctra -length 2 -particles particles.txt -id ${SLURM_JOBID}
 #ibrun tacc_affinity ./solctra.serial -length 1 -particles particles.txt -id serial_${SLURM_JOBID}
 
-#/opt/intel/vtune_amplifier_xe_2017/bin64/amplxe-cl -collect hpc-performance -knob analyze-openmp=true -knob enable-stack-collection=true -result-dir=./amplxe_hpc_${SLURM_JOBID} -data-limit=512 -app-working-dir=./ -source-search-dir=./ -finalization-mode=full -- ibrun ./solctra.knl -length 2 -particles particles.txt -id ${SLURM_JOBID}
-#/opt/intel/vtune_amplifier_xe_2017/bin64/amplxe-cl -collect advanced-hotspots -knob collection-detail=stack-and-callcount -knob enable-user-tasks=true -knob analyze-openmp=true -result-dir=./amplxe_hot_${SLURM_JOBID} -data-limit=512 -app-working-dir=./ -finalization-mode=full -- ibrun ./solctra.knl -length 2 -particles particles.txt -id ${SLURM_JOBID}
-#/opt/intel/vtune_amplifier_xe_2017/bin64/amplxe-cl -collect advanced-hotspots -knob analyze-openmp=true -result-dir=./amplxe_hot_${SLURM_JOBID} -data-limit=512 -app-working-dir=./ -finalization-mode=full -- ibrun ./solctra.knl -length 2 -particles particles.txt -id ${SLURM_JOBID}
-
-#ibrun /opt/intel/advisor_2017/bin64/advixe-cl -collect=survey -app-working-dir=/home1/04189/ldcl289/src/cadejos -data-limit=512 -duration=5400 -record-mem-allocations -record-stack-frame -track-stack-variables -project-dir=/home1/04189/ldcl289/src/cadejos/advixe_${SLURM_JOBID} -- ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
-#ibrun /opt/intel/advisor_2017/bin64/advixe-cl -collect=survey -app-working-dir=/home1/04189/ldcl289/src/cadejos -data-limit=256 -duration=3600 -no-record-mem-allocations -no-track-stack-variables -project-dir=/home1/04189/ldcl289/src/cadejos/advixe_${SLURM_JOBID} -- ./solctra.knl -length 4 -particles particles.txt -id ${SLURM_JOBID}
-
-
-
-
-echo "Using ID=${SLURM_JOBID}" | tee -a results_${SLURM_JOBID}/summary
-grep 'OMP_NESTED=' solctra.o${SLURM_JOBID} | tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-grep 'OMP_PLACES' solctra.o${SLURM_JOBID} | tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-grep 'OMP_PROC_BIND=' solctra.o${SLURM_JOBID} | tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-grep 'OMP_SCHEDULE=' solctra.o${SLURM_JOBID} | tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-grep 'KMP_AFFINITY=' solctra.o${SLURM_JOBID} | tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-grep 'KMP_PLACE_THREADS=' solctra.o${SLURM_JOBID} | tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-grep 'OMP_NUM_THREADS=' solctra.o${SLURM_JOBID}| tail -n1 | tr -d [:space:] | tee -a results_${SLURM_JOBID}/summary
-echo "" | tee -a results_${SLURM_JOBID}/summary
-echo "I_MPI_PIN_DOMAIN=$I_MPI_PIN_DOMAIN" | tee -a results_${SLURM_JOBID}/summary
-echo "HOST=`hostname -f`" | tee -a results_${SLURM_JOBID}/summary
-grep "Total execution time" solctra.o${SLURM_JOBID} | tail -n1 | tee -a results_${SLURM_JOBID}/summary
-
-./omp_verbose_parser.pl -log solctra.o${SLURM_JOBID}  -out results_${SLURM_JOBID} | tee -a results_${SLURM_JOBID}/summary
-
-mv stdout_${SLURM_JOBID}.log results_${SLURM_JOBID}/.
-mv solctra.o${SLURM_JOBID} results_${SLURM_JOBID}/.
-
-
-mv results_${SLURM_JOBID} $RESULTS_DIR/.
-
-
-
-
+mv results_${SLURM_JOBID} $RESULTS_DIR/solctra/results/.
+mv stdout_${SLURM_JOBID}.log $RESULTS_DIR/solctra/results/.
+mv solctra.o${SLURM_JOBID} $RESULTS_DIR/solctra/results/.
