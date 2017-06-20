@@ -1,12 +1,16 @@
 //
-// Created by lchavarr,ezamora on 4/19/16.
+// Created by lchavarr on 4/19/16.
 //
 
 
 #include "utils.h"
+#include <cstdlib>
 #include <sys/time.h>
+#include <sys/stat.h>
+#include <fstream>
 
 #ifndef __INTEL_COMPILER
+#include <cstdlib>
 
 void* _mm_malloc(size_t size, size_t /*alignment*/)
 {
@@ -18,6 +22,29 @@ void _mm_free(void* pointer)
 }
 #endif
 
+void loadFile(double* x, double* y, double* z, const int length, const std::string& path)
+{
+    FILE* file_buff;
+    //Open file
+    file_buff = fopen(path.c_str(), "r");
+    if (file_buff == nullptr)
+    {
+        printf("Error al abrir archivo \n");
+    }
+    else
+    {
+        double localX, localY, localZ;
+        printf("Loading %s with length=%d\n", path.c_str(), length);
+        for (int point = 0; point < length; point++)
+        {
+            fscanf(file_buff, "%le %le %le", &localX, &localY, &localZ);
+            x[point] = localX;
+            y[point] = localY;
+            z[point] = localZ;
+        }
+        fclose(file_buff);
+    }
+}
 
 double getCurrentTime()
 {
@@ -26,48 +53,43 @@ double getCurrentTime()
     return static_cast<double>(tod.tv_sec) + static_cast<double>(tod.tv_usec) * 1.0e-6;
 }
 
-void freeGlobalDataInMic(const GlobalData& data)
+void createDirectoryIfNotExists(const std::string& path)
 {
-//#ifdef __MIC__
-    const int devices = _Offload_number_of_devices();
-    for(int i = 0 ; i < devices ; ++i)
+    if(!directoryExists(path))
     {
-#pragma offload_transfer target(mic:i) in(data.coils.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
-                                     in(data.coils.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
-                                     in(data.coils.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
-                                     in(data.e_roof.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
-                                     in(data.e_roof.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
-                                     in(data.e_roof.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE) \
-                                     in(data.leng_segment: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) FREE)
+        const int error = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        if (0 > error)
+        {
+            printf("Error creating directory!n");
+            exit(1);
+        }
     }
-//#endif
 }
 
-void allocGlobaDataInMic(const GlobalData& data)
+bool directoryExists(const std::string& path)
 {
-//#ifdef __MIC_
-    const int devices = _Offload_number_of_devices();
-    int flags[devices];
-    flags[0:devices] = 0;
-    for(int i = 0 ; i < devices ; ++i)
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0)
     {
-        printf("Moving data for device=[%d]\n", i);
-//#pragma offload_transfer target(mic:i) signal(&flags[i]) \
-
-#pragma offload_transfer target(mic:i) \
-                                     in(data.coils.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
-                                     in(data.coils.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
-                                     in(data.coils.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
-                                     in(data.e_roof.x: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
-                                     in(data.e_roof.y: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
-                                     in(data.e_roof.z: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC) \
-                                     in(data.leng_segment: length(TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS) ALLOC)
-        printf("Moved data for device=[%d]\n", i);
+        return false;
     }
-    for(int i = 0 ; i < devices ; ++i)
+    else if (info.st_mode & S_IFDIR)
     {
-//#pragma offload_wait target(mic:i) wait(&flags[i])
+        return true;
     }
-//#endif
+    else
+    {
+        return false;
+    }
 }
 
+std::string getZeroPadded(const int num)
+{
+    std::string value = std::to_string(num);
+    const size_t numSize = value.size();
+    for(size_t i = 0 ; i < 3 - numSize ; ++i)
+    {
+        value = "0" + value;
+    }
+    return value;
+}

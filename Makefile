@@ -1,44 +1,59 @@
 CC=icpc
-
-COMMON_FLAGS=-O3 -o solctra -std=c++11 -Wall
-PARALLEL=-qopenmp
-SERIAL=-qopenmp-stubs -no-vec
+#MPICC=mpicxx.openmpi
+MPICC=/usr/lib64/openmpi/bin/mpicxx
+COMMON_FLAGS=-O3 -std=c++0x -o solctra -fopenmp -Wall
+NO_OMP=-O3 -std=c++11 -o solctra -qopenmp-stubs
+#SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp FileHandler.cpp FileHandler.h Coil.cpp Coil.h GlobalData.cpp GlobalData.h
 SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp
-RPT_FLAGS=-qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openm -qopt-report-phase:offload
-FP_FLAGS=-fp-model precise -fp-model source
+#SOURCE=solctra.h solctra.cpp main.cpp utils.h utils.cpp
+#RPT_FLAGS=-qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openm
+RPT_FLAGS=
+#FP_FLAGS=-fp-model precise -fp-model source 
+FP_FLAGS=
 
 
 all: clean fp-fast
 
 fp-fast: $(SOURCE)
-	$(CC) $(PARALLEL $(COMMON_FLAGS) $(SOURCE)
+	$(CC) $(COMMON_FLAGS) $(SOURCE)
 
 fp-precise: $(SOURCE)
-	$(CC) -fp-model precise $(PARALLEL) $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -fp-model precise $(COMMON_FLAGS) $(SOURCE)
 
 fp-source: $(SOURCE)
-	$(CC) -fp-model source $(PARALLEL) $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -fp-model source $(COMMON_FLAGS) $(SOURCE)
 
 fp-all: $(SOURCE)
-	$(CC) -g $(FP_FLAGS) $(RPT_FLAGS) $(PARALLEL) $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
 
 debug: $(SOURCE)
-	$(CC) -g $(PARALLEL) $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -g $(COMMON_FLAGS) $(SOURCE)
 
-serial: $(SOURCE)
-	$(CC) $(FP_FLAGS) $(SERIAL) $(COMMON_FLAGS) $(SOURCE)
-
-serial-dbg: $(SOURCE)
-	$(CC) -g -debug all $(FP_FLAGS) $(SERIAL) $(COMMON_FLAGS) $(SOURCE)
+noomp: $(SOURCE)
+	$(CC) ${FP_FLAGS} $(NO_OMP) $(SOURCE)
 
 gcc: $(SOURCE)
-	g++  $(COMMON_FLAGS) $(SOURCE)
+	g++ -O3 -std=c++11 -o solctra $(SOURCE)
 
 mic: $(SOURCE)
-	$(CC) -qoffload -qopenmp-offload=mic -g $(PARALLEL) $(FP_FLAGS) $(RPT_FLAGS) $(COMMON_FLAGS) $(SOURCE)
+	$(CC) -mmic -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
 
-mic-dbg: $(SOURCE)
-	$(CC) -g -qoffload -qopenmp-offload=mic -g $(PARALLEL) $(FP_FLAGS) $(RPT_FLAGS) $(COMMON_FLAGS) $(SOURCE)
+mpi: $(SOURCE)
+	$(MPICC) -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
+
+mpi-icpc: $(SOURCE)
+	mpiicpc -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o bs-solctra -qopenmp -Wall $(SOURCE)
+
+mpi-icpc-serial: $(SOURCE)
+	mpic++ -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.serial -qopenmp-stubs -no-vec $(SOURCE)
+
+mpi-icpc-knl: $(SOURCE)
+	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o bs-solctra       -qopenmp -Wall $(SOURCE) -DKNL=8
+#	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.knl.8 -qopenmp -Wall $(SOURCE) -DKNL=8
+#	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.knl.16 -qopenmp -Wall $(SOURCE) -DKNL=16
+
+mpi-icpc-mic: $(SOURCE)
+	mpic++ -mmic -g -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.mic -qopenmp -Wall $(SOURCE)
 
 clean:
-	rm -f solctra results/* *.optrpt
+	rm -f solctra

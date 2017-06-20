@@ -1,6 +1,0 @@
-export MIC_ENV_PREFIX=PHI
-export OMP_NESTED true
-export PHI_OMP_NESTED true
-export OMP_NUM_THREADS=32
-export PHI_OMP_NUM_THREADS=256
-export OFFLOAD_REPORT=2

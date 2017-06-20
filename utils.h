@@ -5,22 +5,24 @@
 #ifndef SOLCTRA_UTILS_H
 #define SOLCTRA_UTILS_H
 
+
 #define     PI      3.141592654
 #define     miu     1.2566e-06
 #define     I       -4350
 #define ALIGNMENT_SIZE 64
+#ifdef KNL
+#define GRADES_PER_PAGE ALIGNMENT_SIZE  * KNL / sizeof(double)
+#else
+#define GRADES_PER_PAGE ALIGNMENT_SIZE / sizeof(double)
+#endif
 #define TOTAL_OF_GRADES 360
 #define TOTAL_OF_GRADES_PADDED 384
 #define TOTAL_OF_COILS 12
-#define PATH_TO_RESOURCES "resources"
-#define ALLOC alloc_if(1) free_if(0)
-#define FREE alloc_if(0) free_if(1)
-#define REUSE alloc_if(0) free_if(0)
+//#define PATH_TO_RESOURCES "resources"
 
 
-#pragma offload_attribute(push, target(mic))
 #include <cstdio>
-#pragma offload_attribute(pop)
+#include <string>
 
 struct cartesian
 {
@@ -45,9 +47,6 @@ struct GlobalData
     double* leng_segment;
 };
 
-void allocGlobaDataInMic(const GlobalData& data);
-void freeGlobalDataInMic(const GlobalData& data);
-
 #ifndef __INTEL_COMPILER
 
 void* _mm_malloc(size_t size, size_t alignment);
@@ -57,6 +56,10 @@ void _mm_free(void* pointer);
 
 #endif
 
+void loadFile(double* x, double* y, double* z, const int length, const std::string& path);
 double getCurrentTime();
+void createDirectoryIfNotExists(const std::string& path);
+bool directoryExists(const std::string& path);
+std::string getZeroPadded(const int num);
 
 #endif //SOLCTRA_UTILS_H
