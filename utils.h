@@ -62,5 +62,4 @@ void createDirectoryIfNotExists(const std::string& path);
 bool directoryExists(const std::string& path);
 std::string getZeroPadded(const int num);
 
-
 #endif //SOLCTRA_UTILS_H

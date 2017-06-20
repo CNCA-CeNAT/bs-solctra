@@ -198,7 +198,7 @@ int main(int argc, char** argv)
     {
         std::strcpy(tmp, output.c_str());
     }
-    MPI_Bcast(tmp, outputSize, MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(tmp, outputSize + 1, MPI_CHAR, 0, MPI_COMM_WORLD);
     if(0 != myRank)
     {
        output = std::string(tmp);

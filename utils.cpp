@@ -24,34 +24,26 @@ void _mm_free(void* pointer)
 
 void loadFile(double* x, double* y, double* z, const int length, const std::string& path)
 {
-    std::ifstream handler(path);
-    //FILE* file_buff;
+    FILE* file_buff;
     //Open file
-    //file_buff = fopen(path.c_str(), "r");
-    //if (file_buff == nullptr)
-    if(!handler.is_open())
+    file_buff = fopen(path.c_str(), "r");
+    if (file_buff == nullptr)
     {
-        printf("Error al abrir archivo=[%s] \n", path.c_str());
+        printf("Error al abrir archivo \n");
     }
     else
     {
         double localX, localY, localZ;
         printf("Loading %s with length=%d\n", path.c_str(), length);
-
-        int point = 0;
-        std::string line;
-        while ( std::getline(handler, line) && point < length)
+        for (int point = 0; point < length; point++)
         {
-            //printf("Line[%d]=[%s]\n", point, line.c_str());
-            sscanf(line.c_str(), "%le %le %le", &localX, &localY, &localZ);
+            fscanf(file_buff, "%le %le %le", &localX, &localY, &localZ);
             x[point] = localX;
             y[point] = localY;
             z[point] = localZ;
-            ++point;
         }
-        handler.close();
+        fclose(file_buff);
     }
-
 }
 
 double getCurrentTime()

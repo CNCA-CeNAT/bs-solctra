@@ -42,13 +42,13 @@ mpi: $(SOURCE)
 	$(MPICC) -g ${FP_FLAGS} ${RPT_FLAGS} $(COMMON_FLAGS) $(SOURCE)
 
 mpi-icpc: $(SOURCE)
-	mpic++ -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra -qopenmp -Wall $(SOURCE)
+	mpiicpc -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o bs-solctra -qopenmp -Wall $(SOURCE)
 
 mpi-icpc-serial: $(SOURCE)
 	mpic++ -g -xHost -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.serial -qopenmp-stubs -no-vec $(SOURCE)
 
 mpi-icpc-knl: $(SOURCE)
-	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra       -qopenmp -Wall $(SOURCE) -DKNL=8
+	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o bs-solctra       -qopenmp -Wall $(SOURCE) -DKNL=8
 #	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.knl.8 -qopenmp -Wall $(SOURCE) -DKNL=8
 #	mpiicpc -g -xMIC-AVX512 -fp-model precise -fp-model source -qopt-report=5 -qopt-report-phase:vec -qopt-report-phase:openmp -O3 -std=c++11 -o solctra.knl.16 -qopenmp -Wall $(SOURCE) -DKNL=16
 

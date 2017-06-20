@@ -43,6 +43,7 @@ void load_coil_data(double* x, double* y, double* z, const std::string& path)
         std::string tmp = path + "/Bobina"+std::to_string(num)+"m.txt";
         //Set Coil files location
         //sprintf(coil_file, tmp.c_str(), num);
+		//printf("Loading coil data file=[%s]\n", tmp.c_str());
         loadFile(&(x[num * TOTAL_OF_GRADES_PADDED]), &(y[num * TOTAL_OF_GRADES_PADDED]), &(z[num * TOTAL_OF_GRADES_PADDED]), TOTAL_OF_GRADES + 1, tmp);
     }
 }
