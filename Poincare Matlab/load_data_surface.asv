@@ -1,0 +1,13 @@
+function surfaces =load_data_surface( num_surfaces )
+%LOAD_DATA_SURFACE Summary of this function goes here
+%   Detailed explanation goes here
+    for k = 1:num_surfaces
+            
+        file_name= sprintf('Results/Surface1_%d.txt',k);
+  
+        surfaces{k}= importdata(file_name);
+  
+    end
+
+end
+
