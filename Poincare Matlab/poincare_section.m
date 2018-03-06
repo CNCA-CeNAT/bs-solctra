@@ -5,7 +5,7 @@ function [poincare] = poincare_section(angle,traj)
 %%If you need to remember about intersection of  plane and a line,  visit:http://www.tec-digital.itcr.ac.cr/revistamatematica/cursos-linea/Algebra-Lineal/algebra-vectorial-geova-walter/node6.html
     %%loading the trajectories from files.
     
-    trajectory_number = sprintf('Resultsmt/path%d.txt',traj);
+    trajectory_number = sprintf('RBSSolctra/path%d.txt',traj);
     trajectory= importdata(trajectory_number);
     %%%trajectory{1}=trajectories{traj};
     turn=0;

@@ -6,7 +6,7 @@ function poincare()
     %for Beta=0:45:90
        % Beta=53;
    
-       parfor j=1:1%%parfor
+       parfor j=1:64%%parfor
             %poincare_cell{t}=poincare_section(Beta,t); 
             %surface=poincare_cell{t};%particle};
             %file= sprintf('Results4/Phi53/Surface53_%d.txt',t);
