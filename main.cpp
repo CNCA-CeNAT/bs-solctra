@@ -1,3 +1,20 @@
+/**
+   	BS-SOLCTRA, main.cpp
+    Purpose: Main function file. Defines functions for
+    input parameter parsing and the main execution function
+    where the MPI parallel programming standard is used to parallelize the 
+    execution flow.
+
+	Version 1
+    @author Luis Diego Chavarria
+    @Owners: Plasma Physics Laboratory, Costa Rica Institute of Technology
+    		 Advanced Computing Laboratory, Costa Rica National High Technology Center
+
+	Version 1, review 1
+	@author: Diego Jimenez
+	Changes:
+		- Added documentation to code
+*/
 
 #include "solctra.h"
 #include <mpi.h>
@@ -15,6 +32,17 @@ const unsigned DEFAULT_MODE= 1;
 const std::string DEFAULT_OUTPUT = "results";
 const std::string DEFAULT_RESOURCES = "resources";
 
+
+/**
+    Parses through input parameters to obtain the precision for 
+    the simulation. Searches for the -precision flag and obtains 
+    the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return value of the input Precision if given. If not, returns the
+    default value for PRECISION = 5
+*/
 unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -27,6 +55,17 @@ unsigned getPrintPrecisionFromArgs(const int& argc, char** argv)
     }
     return DEFAULT_PRECISION;
 }
+
+/**
+    Parses through input parameters to obtain the amount of steps to perform 
+    in the simulation. Searches for the -steps flag and obtains 
+    the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return amount of steps to perform if given. If not, returns the
+    default value for steps = 500000
+*/
 unsigned getStepsFromArgs(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -39,6 +78,18 @@ unsigned getStepsFromArgs(const int& argc, char** argv)
     }
     return DEFAULT_STEPS;
 }
+
+
+/**
+    Parses through input parameters to obtain the stepsize to use 
+    in the simulation. Searches for the -stepSize flag and obtains 
+    the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return value of stepSize to use if given. If not, returns the
+    default value for stepSize = 0.001
+*/
 double getStepSizeFromArgs(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -51,6 +102,19 @@ double getStepSizeFromArgs(const int& argc, char** argv)
     }
     return DEFAULT_STEP_SIZE;
 }
+
+
+/**
+    Function used to load the different input particles from an input file.
+    This function calls the loadFile() function from the utils.cpp file to read 
+    values from file.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    	   Coil& particles: pointer to SoA to save the different particles x,y and z information.
+    	   const int length: number of particles to load for simulation.
+    @return void function. Position values of particles are passed through pointers. 
+*/
 void LoadParticles(const int& argc, char** argv, Coil& particles, const int length)
 {
     bool found = false;
@@ -71,6 +135,17 @@ void LoadParticles(const int& argc, char** argv, Coil& particles, const int leng
     }
 }
 
+/**
+    Parses through input parameters to obtain the resourcePath to use 
+    in the simulation. The resourcePath is the directory where the different coil files
+    are stored. Searches for the -resource flag and obtains 
+    the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return string of the resourcePath if found. If not, returns the
+    default value for resourcePath = "resources"
+*/
 std::string getResourcePath(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -84,6 +159,16 @@ std::string getResourcePath(const int& argc, char** argv)
     return DEFAULT_RESOURCES;
 }
 
+
+/**
+    Parses through input parameters to obtain the length (amount of particles) to use 
+    in the simulation. Searches for the -length flag and obtains 
+    the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return value or amount of particles to use.
+*/
 unsigned getParticlesLengthFromArgs(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -97,6 +182,17 @@ unsigned getParticlesLengthFromArgs(const int& argc, char** argv)
     printf("ERROR: length of particles path must be given!!\n");
     exit(1);
 }
+
+/**
+    Parses through input parameters to obtain the mode to use 
+    in the simulation. Searches for the -mode flag and obtains 
+    the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return value of mode to use for simulation if found. If not DEFAULT_MODE is 
+    used.
+*/
 unsigned getModeFromArgs(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
@@ -110,6 +206,15 @@ unsigned getModeFromArgs(const int& argc, char** argv)
     return DEFAULT_MODE;
 }
 
+
+/**
+    Parses through input parameters to obtain the id of the current execution of
+    the simulation. Searches for the -id flag and obtains the value right after it.
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return value of id for the simulation.
+*/
 std::string getJobId(const int& argc, char** argv)
 {
     for(int i = 1 ; i < argc - 1 ; ++i)
