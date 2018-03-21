@@ -229,27 +229,38 @@ std::string getJobId(const int& argc, char** argv)
     exit(1);
 }
 
+
+/**
+    Main program flow function. This function puts all the simulation 
+    together by calling the different functions of BS-SOLCTRA. In here,
+    parallel execution with MPI is performed and data is distributed 
+    among working units. 
+
+    @param argc: amount of input parameters (numeric value).
+    	   argv: array of values of the different input parameters.
+    @return integer return code. 
+*/
 int main(int argc, char** argv)
 {
-    MPI_Init(&argc, &argv);
-    int myRank;
-    int commSize;
-    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    const int ompSize = omp_get_max_threads();
-    std::string resourcePath;
-    unsigned steps;
-    double stepSize;
-    unsigned precision;
-    unsigned int length;
-    unsigned int mode;
+    MPI_Init(&argc, &argv); //MPI Parallel Region is stared. From here on, parallel process execute the code
+    int myRank; //Variable that will hold the ID for each parallel process. Each process has a unique ID
+    int commSize; //Variable that holds the value for the amount of parallel processes in the rank universe
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize); //This MPI function returns the amount of processes that are available
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank); // This MPI function assigns a unique ID to each rank
+    const int ompSize = omp_get_max_threads(); //This OpenMP function returns the value for the maximum number of threads available on a platform
+    std::string resourcePath; //variable that will hold the path to the input Coil files
+    unsigned steps; // Variaable for simulations steps to perform
+    double stepSize; // Variable for simulation step size ("Simulation resolution")
+    unsigned precision; //Precision to be used for output results
+    unsigned int length; // Variable used to set the amount of points to read from the file of particles
+    unsigned int mode; //Use algorithm convergence as stop condition or execute the given amount of steps
     std::string output;
     std::string jobId;
     std::ofstream handler;
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
-    if(0 == myRank)
+    MPI_Get_processor_name(processor_name, &name_len); //MPI function to get the name of a given processor
+    if(0 == myRank) // Only Rank with 0 ID executes this block: Input parameters are parsed using the different functions present in this cpp file
     {
         std::cout << "Communicator Size=[" << commSize << "]." << std::endl;
         resourcePath = getResourcePath(argc, argv);
@@ -290,14 +301,16 @@ int main(int argc, char** argv)
         handler << "OpenMP size=[" << ompSize << "]." << std::endl;
         handler << "Rank=[" << myRank << "] => Processor Name=[" << processor_name << "]." << std::endl;
     }
+
+    /*All relevant values are broadcasted or passed on to all processes or ranks in the universe*/
     MPI_Bcast(&steps, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&stepSize, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&precision, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&length, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast(&mode, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    
     unsigned int outputSize = static_cast<unsigned int>(output.size()); 
     MPI_Bcast(&outputSize, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    
     char* tmp = new char[outputSize + 1];
     if(0 == myRank)
     {
@@ -310,14 +323,18 @@ int main(int argc, char** argv)
     }
     delete[] tmp;
 
-    Coil particles;
+    /*--------Particle Loading and distribution------------------*/
+    /*A Coil structure is declared and its components are initialized with defined sizes*/ 
+    Coil particles; 
     particles.x = static_cast<double*>(_mm_malloc(sizeof(double) * length, ALIGNMENT_SIZE));
     particles.y = static_cast<double*>(_mm_malloc(sizeof(double) * length, ALIGNMENT_SIZE));
     particles.z = static_cast<double*>(_mm_malloc(sizeof(double) * length, ALIGNMENT_SIZE));
-    if(0 == myRank)
+    if(0 == myRank) // Rank 0 calls the LoadParticles() function which loads the position information for the different particles
     {
         LoadParticles(argc, argv, particles, length);
     }
+
+    //Particles' information is distributed among the different parallel MPI ranks.
     MPI_Bcast(particles.x, length, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(particles.y, length, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(particles.z, length, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -331,47 +348,44 @@ int main(int argc, char** argv)
     std::cout << "Rank=[" << myRank << "] => OpenMP size=[" << ompSize << "]." << std::endl;
     std::cout << "Rank=[" << myRank << "] => Processor Name=[" << processor_name << "]." << std::endl;
 
-    //double x[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double y[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double z[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
+    /*--------Coil Loading and distribution------------------*/
+    /*A GlobalData structure is initialized and the coil components are initialized*/
     const size_t sizeToAllocate = sizeof(double) * TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS;
     GlobalData data;
     data.coils.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.coils.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.coils.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    if(0 == myRank)
+    if(0 == myRank) //Rank 0 calls the load_coil_data function to read in the different Coil files from the resourcePath
     {
         load_coil_data(data.coils.x, data.coils.y, data.coils.z, resourcePath);
         //std::cout << x[TOTAL_OF_GRADES_PADDED] << "|" << y[TOTAL_OF_GRADES_PADDED] << "|" << z[TOTAL_OF_GRADES_PADDED] << std::endl;
         //std::cout << x[TOTAL_OF_GRADES_PADDED*2] << "|" << y[TOTAL_OF_GRADES_PADDED*2] << "|" << z[TOTAL_OF_GRADES_PADDED*2] << std::endl;
     }
+    //Coils' information is distributed among the different parallel MPI ranks.
     MPI_Bcast(data.coils.x, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.coils.y, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.coils.z, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    //double eRoofX[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double eRoofY[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double eRoofZ[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //double leng_segment[TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS] __attribute__((aligned(64)));
-    //data.e_roof.x = eRoofX;
-    //data.e_roof.y = eRoofY;
-    //data.e_roof.z = eRoofZ;
-    //data.leng_segment = leng_segment;
+  
+
+  	//The e_roof components of the GlobalData data variable are initialized
     data.e_roof.x = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.e_roof.y = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.e_roof.z = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
     data.leng_segment = static_cast<double*>(_mm_malloc(sizeToAllocate, ALIGNMENT_SIZE));
-    if(0 == myRank)
+    if(0 == myRank) //Rank 0 uses the e_roof function to calculate the value of e_roof for the different filamentary segments of each coil
     {
-        e_roof(data);
+        e_roof(data); // e roof is the unit vector along each segment (See: Hanson, "Compact expressions for the BiotSavart fields of a filamentary segment") 
     }
+    //e_roof information is distributed among parallel processes
     MPI_Bcast(data.e_roof.x, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.e_roof.y, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.e_roof.z, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(data.leng_segment, TOTAL_OF_GRADES_PADDED * TOTAL_OF_COILS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    const double startTime = getCurrentTime();
-    runParticles(data, output, particles, length, steps, stepSize, mode);
-    const double endTime = getCurrentTime();
+    
+    const double startTime = getCurrentTime(); //Start time measurement for simulation
+    runParticles(data, output, particles, length, steps, stepSize, mode); //Actual simulation function call
+    const double endTime = getCurrentTime(); // Finish time measurement for simulation
     std::cout << "Rank=" << myRank << " before finalize barrier on processor=[" << processor_name << "] with time=[" << (endTime - startTime) << "]!" << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     //endTime = getCurrentTime();

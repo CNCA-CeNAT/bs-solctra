@@ -8,6 +8,15 @@
 #include <mpi.h>
 #include <cstdio>
 
+
+/**
+    Function to initialize and allocate variables Rmi and Rmf, which are the 
+    vectors from the filamentary segments end points to the observation point x.
+
+    @param Coil* rmi: structure to hold information on x,y and z values for the different Rmi values for different coil segments.  
+    	   Coil* rmf: structure to hold information on x,y and z values for the different Rmf values for different coil segments.
+    @return void: no return values
+*/
 void initializeGlobals(Coil* rmi, Coil* rmf)
 {
     for(unsigned int i = 0 ; i < TOTAL_OF_COILS ; ++i)
@@ -21,6 +30,14 @@ void initializeGlobals(Coil* rmi, Coil* rmf)
     }
 }
 
+
+/**
+    Function to free the memory positions for the different Coil Rmfs and Rmis
+
+    @param Coil* rmi: pointer to structure that holds information on x,y and z values for the different Rmi values for different coil segments.  
+    	   Coil* rmf: pointer to structure that holds information on x,y and z values for the different Rmf values for different coil segments.
+    @return void: no return values
+*/
 void finishGlobal(Coil* rmi, Coil* rmf)
 {
     for(unsigned int i = 0 ; i < TOTAL_OF_COILS ; ++i)
@@ -35,6 +52,15 @@ void finishGlobal(Coil* rmi, Coil* rmf)
         //printf("after deletes\n");;
     }
 }
+
+
+/**
+    Function to load coil data from files. 
+
+    @param Coil* rmi: pointer to structure that holds information on x,y and z values for the different Rmi values for different coil segments.  
+    	   Coil* rmf: pointer to structure that holds information on x,y and z values for the different Rmf values for different coil segments.
+    @return void: no return values. Coil information is passed on through pointer variables x, y and z.
+*/
 void load_coil_data(double* x, double* y, double* z, const std::string& path)
 {
     for (int num = 0; num < TOTAL_OF_COILS; num++)
@@ -48,6 +74,14 @@ void load_coil_data(double* x, double* y, double* z, const std::string& path)
     }
 }
 
+
+/**
+    Function to calculte the unit vector along each filamentary segment.  ê = (xf - xi)/L where xi: start position of segment, xf: end position of segment and 
+    L = |xf-xi|
+
+    @param GlobalData data: reference to a GlobalData structure that holds information on coils, e_roof values and leng_segment values.  
+    @return void: no return values. e_roof information is passed on through the references of data.e_roof_x|y|z.
+*/
 void e_roof(GlobalData& data)
 {
     cartesian segment;
@@ -69,6 +103,13 @@ void e_roof(GlobalData& data)
     }
 }
 
+
+/**
+    Function to calculate the vector from segment end points to the observation point x. 
+
+    @param GlobalData data: reference to a GlobalData structure that holds information on coils, e_roof values and leng_segment values.  
+    @return void: no return values. e_roof information is passed on through the references of data.e_roof_x|y|z.
+*/
 void R_vectors(const Coil& coil, const cartesian& point, Coil* Rmi, Coil* Rmf)
 {
 #pragma omp for
@@ -78,8 +119,7 @@ void R_vectors(const Coil& coil, const cartesian& point, Coil* Rmi, Coil* Rmf)
         double* x = &coil.x[base];
         double* y = &coil.y[base];
         double* z = &coil.z[base];
-//#pragma nounroll
-//#pragma ivdep
+
 #pragma vector aligned
 #pragma omp simd
         for (int j = 0; j < TOTAL_OF_GRADES; j++)
@@ -88,11 +128,8 @@ void R_vectors(const Coil& coil, const cartesian& point, Coil* Rmi, Coil* Rmf)
             Rmi[i].y[j] = point.y - y[j];
             Rmi[i].z[j] = point.z - z[j];
         }
-//#pragma nounroll
-//#pragma ivdep
+
 #pragma omp simd
-//This gives a segmentation fault
-//#pragma vector aligned
         for (int j = 0; j < TOTAL_OF_GRADES; j++)
         {
             Rmf[i].x[j] = point.x - x[j + 1];
